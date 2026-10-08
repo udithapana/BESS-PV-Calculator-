@@ -21,7 +21,7 @@
 :root{
   --bg:#EEF1F4; --panel:#FFFFFF; --ink:#15202B; --muted:#5A6672; --line:#D5DCE3; --grid:#E4E9EE; --night:#E6EBF1;
   --sun:#CF8306; --sun-soft:#F5DDAA; --batt:#0E7562; --batt-soft:#BFE3D9; --warn:#B93D0B; --warn-soft:#FBE3D6; --ok:#0E7562; --ok-soft:#D4EEE7;
-  --field:#F7F9FA;
+  --field:#F7F9FA; --ceb:#CDD4DC;
   --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -29,11 +29,11 @@
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#0E141A; --panel:#161F28; --ink:#E4EAF0; --muted:#94A1AD; --line:#2B3743; --grid:#22303C; --night:#131C25;
   --sun:#F0A63A; --sun-soft:#4D3814; --batt:#3FC4A5; --batt-soft:#14423A; --warn:#F2814F; --warn-soft:#46241A; --ok:#3FC4A5; --ok-soft:#173A33;
-  --field:#1C2731; color-scheme:dark; } }
+  --field:#1C2731; --ceb:#35424F; color-scheme:dark; } }
 :root[data-theme="dark"]{
   --bg:#0E141A; --panel:#161F28; --ink:#E4EAF0; --muted:#94A1AD; --line:#2B3743; --grid:#22303C; --night:#131C25;
   --sun:#F0A63A; --sun-soft:#4D3814; --batt:#3FC4A5; --batt-soft:#14423A; --warn:#F2814F; --warn-soft:#46241A; --ok:#3FC4A5; --ok-soft:#173A33;
-  --field:#1C2731; color-scheme:dark; }
+  --field:#1C2731; --ceb:#35424F; color-scheme:dark; }
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -95,7 +95,14 @@ input[aria-invalid=true]{border-color:var(--warn);background:var(--warn-soft)}
 .seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .seg button{border:0;border-radius:0;background:var(--field);color:var(--muted);padding:8px}
 .seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.seg.seg3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seg.seg3 button{font-size:13px;line-height:1.25;padding:8px 6px}
+.seg.seg3 button+button{border-left:1px solid var(--line)}
 .hint{font-size:12.5px;color:var(--muted);margin:0}
+.chk{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.chk input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--ink);flex:none}
+.chk .gh{margin:0;color:var(--ink)}
+.chk small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
 details.more{border-top:1px solid var(--line);margin-top:14px;padding-top:10px}
 details.more summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);list-style-position:outside}
 details.more[open] summary{margin-bottom:10px}
@@ -105,12 +112,14 @@ details.more[open] summary{margin-bottom:10px}
 
 /* Results */
 .results{display:grid;gap:20px;min-width:0}
-.plates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-@media (max-width:560px){.plates{grid-template-columns:minmax(0,1fr)}.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.plates{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:16px}
+@media (max-width:560px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .plate{background:var(--panel);border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
 .plate .ph{display:flex;justify-content:space-between;gap:8px;padding:7px 14px;font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
 .plate.batt .ph{background:var(--batt-soft)}
 .plate.sun .ph{background:var(--sun-soft)}
+.plate.pcs .ph{background:var(--night)}
+.plate.off .num{color:var(--muted)}
 .plate .ph span:last-child{font-family:var(--f-mono);font-weight:400;letter-spacing:0;text-transform:none;opacity:.75}
 .plate .pv{padding:10px 14px 4px;display:flex;align-items:baseline;gap:8px}
 .plate .num{font-family:var(--f-display);font-weight:700;font-size:clamp(44px,6vw,60px);line-height:1;font-variant-numeric:tabular-nums}
@@ -150,6 +159,9 @@ svg .nightbg{fill:var(--night)}
 svg .used{fill:var(--sun-soft)}
 svg .over{fill:var(--sun)}
 svg .bsup{fill:var(--batt-soft)}
+svg .ceb{fill:var(--ceb)}
+svg .pb{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:.6}
+svg .pl{fill:var(--ink);font-weight:500}
 svg .load{fill:none;stroke:var(--ink);stroke-width:2}
 
 .slider{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
@@ -188,7 +200,7 @@ tr.short td{color:var(--muted)}
   <header class="top">
     <div>
       <h1>Solar Battery Calculator</h1>
-      <p class="sub">Sizes the BESS and the minimum PV array needed to carry the site's night load and daytime shortfall on a low-yield design day.</p>
+      <p class="sub">Sizes the BESS, solar PV and PCS for full, day-and-peak or peak-only battery operation on a low-yield design day.</p>
     </div>
     <div class="btns">
       <button id="saveBtn" type="button" hidden>Save to history</button>
@@ -234,6 +246,16 @@ tr.short td{color:var(--muted)}
       </div>
 
       <div class="grp">
+        <p class="gh">BESS operation</p>
+        <div class="seg seg3" role="group" aria-label="Periods the battery supplies">
+          <button type="button" id="scAll" aria-pressed="true">Day, Peak &amp; Off-peak</button>
+          <button type="button" id="scDayPeak" aria-pressed="false">Day &amp; Peak</button>
+          <button type="button" id="scPeak" aria-pressed="false">Peak only</button>
+        </div>
+        <p class="hint" id="scHint"></p>
+      </div>
+
+      <div class="grp">
         <p class="gh">Solar yield</p>
         <div class="row"><label for="minYield">Design-day yield<small>minimum, per kWp</small></label><input type="number" id="minYield" min="0" step="0.05"><span class="u">kWh/kWp</span></div>
         <div class="row"><label for="avgMonthly">Average monthly yield<small>per kWp</small></label><input type="number" id="avgMonthly" min="0" step="1"><span class="u">kWh/kWp</span></div>
@@ -246,9 +268,45 @@ tr.short td{color:var(--muted)}
       </div>
 
       <div class="grp">
-        <p class="gh">Equipment</p>
+        <p class="gh">Equipment and safety margins</p>
         <div class="row"><label for="moduleW">PV module rating</label><input type="number" id="moduleW" min="1" step="5"><span class="u">Wp</span></div>
+        <div class="row"><label for="pvMargin">PV design margin<small>added to minimum solar</small></label><input type="number" id="pvMargin" min="0" max="200" step="5"><span class="u">%</span></div>
         <div class="row"><label for="batUnit">Battery unit size</label><input type="number" id="batUnit" min="0.1" step="0.1"><span class="u">kWh</span></div>
+        <div class="row"><label for="bessMargin">BESS design margin<small>added to required BESS</small></label><input type="number" id="bessMargin" min="0" max="200" step="5"><span class="u">%</span></div>
+      </div>
+
+      <div class="grp">
+        <p class="gh">PCS / inverter sizing</p>
+        <div class="seg" role="group" aria-label="Peak load entered as">
+          <button type="button" id="basisAmp" aria-pressed="true">Max current</button>
+          <button type="button" id="basisKva" aria-pressed="false">Max kVA</button>
+        </div>
+        <div class="row" style="grid-template-columns:minmax(0,1fr) 160px"><label for="phase">Supply</label>
+          <select id="phase"><option value="3">3-phase, 400 V</option><option value="1">1-phase, 230 V</option></select></div>
+        <div class="row" id="rowAmp"><label for="maxAmp">Max load current<small>per phase</small></label><input type="number" id="maxAmp" min="0" step="1"><span class="u">A</span></div>
+        <div class="row" id="rowKva" hidden><label for="maxKva">Max demand</label><input type="number" id="maxKva" min="0" step="0.1"><span class="u">kVA</span></div>
+        <div class="row"><label for="loadPf">Load power factor</label><input type="number" id="loadPf" min="0.1" max="1" step="0.01"><span class="u"></span></div>
+        <div class="row"><label for="batC">Battery max discharge<small>continuous, from datasheet</small></label><input type="number" id="batC" min="0.05" max="5" step="0.05"><span class="u">C</span></div>
+        <div class="row"><label for="pcsMargin">Design margin</label><input type="number" id="pcsMargin" min="0" max="100" step="5"><span class="u">%</span></div>
+        <p class="hint">Enter 0 to leave PCS sizing out of the results and report.</p>
+      </div>
+
+      <div class="grp">
+        <label class="chk" for="cebOn"><input type="checkbox" id="cebOn"><span><span class="gh">CEB connection check</span><small>Tick when CEB connection data is available. Unticked, it is left out of the results and report.</small></span></label>
+        <div class="grp" id="cebFields" style="padding-top:2px" hidden>
+          <div class="row"><label for="kva">Transformer / connection</label><input type="number" id="kva" min="0" step="1"><span class="u">kVA</span></div>
+          <div class="row"><label for="pf">Power factor</label><input type="number" id="pf" min="0" max="1" step="0.01"><span class="u"></span></div>
+          <div class="row"><label for="loadPct">Average loading</label><input type="number" id="loadPct" min="0" max="100" step="1"><span class="u">%</span></div>
+          <div class="row" style="grid-template-columns:minmax(0,1fr) 160px"><label for="cebTime">Grid used during</label>
+            <select id="cebTime">
+              <option value="peak">Peak (4 h)</option>
+              <option value="day">Day (13 h)</option>
+              <option value="off">Off-peak (7 h)</option>
+              <option value="daypeak">Day &amp; Peak (17 h)</option>
+              <option value="dayoff">Day &amp; Off-peak (20 h)</option>
+              <option value="peakoff">Peak &amp; Off-peak (11 h)</option>
+            </select></div>
+        </div>
       </div>
 
       <div class="grp">
@@ -265,23 +323,6 @@ tr.short td{color:var(--muted)}
         <div class="prof" id="prof"></div>
       </details>
 
-      <details class="more" id="cebBox">
-        <summary>CEB connection check (optional)</summary>
-        <div class="grp" style="padding-top:0">
-          <div class="row"><label for="kva">Transformer / connection</label><input type="number" id="kva" min="0" step="1"><span class="u">kVA</span></div>
-          <div class="row"><label for="pf">Power factor</label><input type="number" id="pf" min="0" max="1" step="0.01"><span class="u"></span></div>
-          <div class="row"><label for="loadPct">Average loading</label><input type="number" id="loadPct" min="0" max="100" step="1"><span class="u">%</span></div>
-          <div class="row" style="grid-template-columns:minmax(0,1fr) 160px"><label for="cebTime">Grid used during</label>
-            <select id="cebTime">
-              <option value="peak">Peak (4 h)</option>
-              <option value="day">Day (13 h)</option>
-              <option value="off">Off-peak (7 h)</option>
-              <option value="daypeak">Day &amp; Peak (17 h)</option>
-              <option value="dayoff">Day &amp; Off-peak (20 h)</option>
-              <option value="peakoff">Peak &amp; Off-peak (11 h)</option>
-            </select></div>
-        </div>
-      </details>
     </form>
 
     <!-- RESULTS -->
@@ -297,13 +338,19 @@ tr.short td{color:var(--muted)}
           <div class="ph"><span>Required BESS capacity</span><span>C41</span></div>
           <div class="pv"><span class="num" id="rBess">–</span><span class="unit">kWh</span></div>
           <div class="pd" id="rBessD">–</div>
-          <div class="pick"><span>Selection</span><b id="rBessPick">–</b></div>
+          <div class="pick"><span id="rBessPickL">Recommended</span><b id="rBessPick">–</b></div>
         </div>
         <div class="plate sun">
           <div class="ph"><span>Minimum solar system</span><span>C42</span></div>
           <div class="pv"><span class="num" id="rPv">–</span><span class="unit">kWp</span></div>
           <div class="pd" id="rPvD">–</div>
-          <div class="pick"><span>Selection</span><b id="rPvPick">–</b></div>
+          <div class="pick"><span id="rPvPickL">Recommended</span><b id="rPvPick">–</b></div>
+        </div>
+        <div class="plate pcs" id="pcsPlate">
+          <div class="ph"><span>PCS / inverter rating</span><span>kVA</span></div>
+          <div class="pv"><span class="num" id="rPcs">–</span><span class="unit">kVA</span></div>
+          <div class="pd" id="rPcsD">–</div>
+          <div class="pick"><span>Peak load</span><b id="rPcsPick">–</b></div>
         </div>
       </section>
 
@@ -311,7 +358,7 @@ tr.short td{color:var(--muted)}
 
       <section class="card">
         <h2>Battery requirement vs solar capacity</h2>
-        <p class="lead">The battery must be refilled each day from surplus solar. Below the crossing point the array cannot recharge it. Above it, a larger array also trims the daytime shortfall, so the battery needed falls slightly.</p>
+        <p class="lead" id="c1Lead"></p>
         <div class="chart" id="chart1"></div>
         <div class="legend">
           <span><i class="line" style="background:var(--batt)"></i>Energy needed to recharge battery (kWh/day)</span>
@@ -332,10 +379,17 @@ tr.short td{color:var(--muted)}
         <div class="chart" id="chart2"></div>
         <div class="legend">
           <span><i style="background:var(--sun-soft)"></i>Solar used directly</span>
-          <span><i style="background:var(--sun)"></i>Surplus solar, charges battery</span>
+          <span><i style="background:var(--sun)"></i>Solar charging the battery</span>
           <span><i style="background:var(--batt-soft)"></i>Supplied by battery</span>
+          <span><i style="background:var(--ceb)"></i>Supplied by CEB grid</span>
           <span><i class="line" style="background:var(--ink)"></i>Site load</span>
         </div>
+      </section>
+
+      <section class="card" id="pcsCard" hidden>
+        <h2>PCS / inverter sizing</h2>
+        <p class="lead">Rating needed for the PCS or hybrid inverter to carry the site's peak load from the battery, with checks on battery discharge rate and PV input.</p>
+        <div class="tbl"><table id="pcsTbl"></table></div>
       </section>
 
       <section class="card">
@@ -361,7 +415,8 @@ tr.short td{color:var(--muted)}
       <section class="notes">
         <p class="gh">How the model works</p>
         <ul>
-          <li>Solar produces from 06:00 to 18:00. During those hours the site draws the day-tariff hourly load. The battery carries the 12 h from 18:00 to 06:00: all peak and off-peak units, plus the one hour of day-tariff load that falls in that window.</li>
+          <li id="noteScen"></li>
+          <li>Recommended selections add the PV and BESS design margins to the minimum sizes, then round up to whole modules and battery units. The battery figures already include DOD and efficiency.</li>
           <li>The battery must also cover morning and evening hours when solar output is below the load. The array qualifies once its surplus on the design day can put that full amount back into the battery.</li>
           <li>Changes from the Excel: day-tariff hours are 13 h throughout (Sheet1 D29 says 11). Non-TOU daytime units are spread per hour, where Sheet2 G19 added the daily figure to an hourly rate. DOD is now applied to the battery result.</li>
         </ul>
@@ -375,9 +430,13 @@ tr.short td{color:var(--muted)}
 (function(){
 const HRS=['6–7','7–8','8–9','9–10','10–11','11–12','12–1','1–2','2–3','3–4','4–5','5–6'];
 const DEFAULTS={mode:'tou',peak:424,day:1350,off:485,monthly:2259,dayShare:60,days:30,minYield:3.25,avgMonthly:107,dod:90,eff:100,moduleW:585,batUnit:5,
-  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',project:'',site:'',preparedBy:'',refNo:''};
+  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',cebOn:false,scen:'all',pvMargin:15,bessMargin:15,pcsBasis:'amp',phase:'3',maxAmp:40,maxKva:0,loadPf:0.8,pcsMargin:20,batC:0.5,project:'',site:'',preparedBy:'',refNo:''};
 const TEXT_KEYS=['project','site','preparedBy','refNo'];
-const NUM_KEYS=['peak','day','off','monthly','dayShare','days','minYield','avgMonthly','dod','eff','moduleW','batUnit','kva','pf','loadPct'];
+const NUM_KEYS=['peak','day','off','monthly','dayShare','days','minYield','avgMonthly','dod','eff','moduleW','batUnit','kva','pf','loadPct','maxAmp','maxKva','loadPf','pcsMargin','pvMargin','bessMargin','batC'];
+const SC_L={all:'Day, Peak & Off-peak',daypeak:'Day & Peak',peak:'Peak only'};
+const SC_HINT={all:'Battery covers 18:00–06:00 and any daytime shortfall. Solar runs the daytime load and charges the battery.',daypeak:'Battery covers the peak (18:30–22:30), the day-tariff hours without sun and any daytime shortfall. Solar runs the daytime load and charges the battery. CEB supplies off-peak (22:30–05:30).',peak:'Battery covers the peak (18:30–22:30) only. All solar output charges the battery; solar does not supply the site directly. CEB supplies the day and off-peak periods.'};
+const SC_NOTE={all:'Solar produces from 06:00 to 18:00 and runs the day-tariff load in those hours. The battery carries 18:00–06:00: all peak and off-peak units plus the one hour of day-tariff load in that window, and any daytime hour where solar is below the load.',daypeak:'Solar produces from 06:00 to 18:00 and runs the day-tariff load in those hours. The battery carries the peak (18:30–22:30), the day-tariff half-hours 05:30–06:00 and 18:00–18:30, and any daytime hour where solar is below the load. CEB supplies the off-peak period (22:30–05:30).',peak:'The battery carries only the peak period (18:30–22:30). Solar charges the battery and does not supply the site directly, so all of its design-day output counts towards recharging. CEB supplies the day and off-peak periods.'};
+const PCS_STD=[3,3.6,5,6,8,10,12,15,17,20,25,30,36,40,50,60,75,80,100,110,125,150,200,250,300,400,500,630,800,1000];
 const CEB_H={peak:4,day:13,off:7,daypeak:17,dayoff:20,peakoff:11};
 const CEB_L={peak:'Peak',day:'Day',off:'Off-peak',daypeak:'Day & Peak',dayoff:'Day & Off-peak',peakoff:'Peak & Off-peak'};
 const STORE='solar-battery-calc-v1';
@@ -399,6 +458,10 @@ function fill(){
   TEXT_KEYS.forEach(k=>{$(k).value=state[k]||'';});
   state.profile.forEach((v,i)=>{$('p'+i).value=v;});
   $('cebTime').value=state.cebTime;
+  $('phase').value=state.phase==='1'?'1':'3';
+  $('cebOn').checked=!!state.cebOn;$('cebFields').hidden=!state.cebOn;
+  setBasis(state.pcsBasis,true);
+  setScen(state.scen,true);
   setMode(state.mode,true);
 }
 function setMode(m,silent){
@@ -408,31 +471,52 @@ function setMode(m,silent){
   $('touRows').hidden=m!=='tou';$('flatRows').hidden=m==='tou';
   if(!silent)update(true);
 }
+function setScen(sc,silent){
+  state.scen=SC_L[sc]?sc:'all';
+  $('scAll').setAttribute('aria-pressed',state.scen==='all');$('scDayPeak').setAttribute('aria-pressed',state.scen==='daypeak');$('scPeak').setAttribute('aria-pressed',state.scen==='peak');
+  $('scHint').textContent=SC_HINT[state.scen];$('noteScen').textContent=SC_NOTE[state.scen];
+  if(!silent)update(true);
+}
+function setBasis(m,silent){
+  state.pcsBasis=m==='kva'?'kva':'amp';
+  $('basisAmp').setAttribute('aria-pressed',state.pcsBasis==='amp');$('basisKva').setAttribute('aria-pressed',state.pcsBasis==='kva');
+  $('rowAmp').hidden=state.pcsBasis!=='amp';$('rowKva').hidden=state.pcsBasis!=='kva';
+  if(!silent)update(false);
+}
 function readInputs(){
   NUM_KEYS.forEach(k=>{const el=$(k);const v=parseFloat(el.value);const bad=el.value!==''&&(!isFinite(v)||v<0);el.setAttribute('aria-invalid',bad);state[k]=isFinite(v)&&v>=0?v:0;});
   for(let i=0;i<12;i++){const el=$('p'+i);const v=parseFloat(el.value);state.profile[i]=isFinite(v)&&v>=0?v:0;el.setAttribute('aria-invalid',el.value!==''&&!(v>=0));}
   state.cebTime=$('cebTime').value;
+  state.phase=$('phase').value;
+  state.cebOn=$('cebOn').checked;$('cebFields').hidden=!state.cebOn;
   TEXT_KEYS.forEach(k=>{state[k]=$(k).value.trim();});
 }
 
 // ---------- model ----------
 function base(s){
   const days=Math.max(s.days,1);
-  let dayM,nightM;
-  if(s.mode==='tou'){dayM=s.day;nightM=s.peak+s.off;}
-  else{const sh=Math.min(s.dayShare,100)/100;dayM=s.monthly*sh;nightM=s.monthly*(1-sh);}
-  const totalM=dayM+nightM;
-  const dh=dayM/days/13;                    // Sheet2 G19 / I35
-  const nightE=nightM/days+dh;              // 18:00–06:00 window incl. 1 h of day load
+  let dayM,peakM,offM;
+  if(s.mode==='tou'){dayM=s.day;peakM=s.peak;offM=s.off;}
+  else{const sh=Math.min(s.dayShare,100)/100,nightM=s.monthly*(1-sh);dayM=s.monthly*sh;peakM=nightM*4/11;offM=nightM*7/11;}
+  const nightM=peakM+offM,totalM=dayM+nightM;
+  const dayD=dayM/days,peakD=peakM/days,offD=offM/days;
+  const dh=dayD/13,pk=peakD/4,op=offD/7;     // hourly loads: day 05:30–18:30, peak 18:30–22:30, off-peak 22:30–05:30
+  const nightE=peakD+offD+dh;               // 18:00–06:00 window incl. 1 h of day load
   const nh=nightE/12;                       // Sheet2 G20
+  const scen=SC_L[s.scen]?s.scen:'all';
+  const serveDay=scen!=='peak';
+  const battOut=scen==='all'?nightE:scen==='daypeak'?peakD+dh:peakD;   // battery energy outside solar hours
+  const gridD=scen==='all'?0:scen==='daypeak'?offD:dayD+offD;         // energy still taken from CEB per day
   const psum=s.profile.reduce((a,b)=>a+b,0);
   const scale=psum>0?s.minYield/psum:0;     // Sheet2 E16/D16
-  return {days,dayM,nightM,totalM,dh,nightE,nh,psum,scale,daily:totalM/days,eff:Math.max(Math.min(s.eff,100),1)/100,dod:Math.max(Math.min(s.dod,100),1)/100};
+  return {days,dayM,peakM,offM,nightM,totalM,dayD,peakD,offD,dh,pk,op,nightE,nh,scen,serveDay,battOut,gridD,psum,scale,daily:totalM/days,
+    eff:Math.max(Math.min(s.eff,100),1)/100,dod:Math.max(Math.min(s.dod,100),1)/100};
 }
 function at(b,s,P){
   let deficit=0,excess=0;const gen=[];
-  for(let i=0;i<12;i++){const g=s.profile[i]*b.scale*P;gen.push(g);if(g<b.dh)deficit+=b.dh-g;else excess+=g-b.dh;}
-  const usable=deficit+12*b.nh;             // Sheet2 G21
+  for(let i=0;i<12;i++){const g=s.profile[i]*b.scale*P;gen.push(g);
+    if(b.serveDay){if(g<b.dh)deficit+=b.dh-g;else excess+=g-b.dh;}else excess+=g;}
+  const usable=deficit+b.battOut;           // Sheet2 G21 (all periods)
   const charge=usable/b.eff;
   return {P,gen,deficit,excess,usable,charge,ok:excess>=charge-1e-9,bess:usable/b.dod};
 }
@@ -460,35 +544,50 @@ function update(resetSel){
   let msg='';
   if(b.totalM<=0)msg='Enter the monthly units from the electricity bill to size the system.';
   else if(b.psum<=0||s.minYield<=0)msg='The solar profile and design-day yield must be above zero.';
+  else if(at(b,s,0).usable<=1e-9)msg=b.scen==='peak'?'Peak only: the battery has nothing to supply. Enter the peak units, or choose another BESS operation.':'The battery has nothing to supply with these units. Check the consumption, or choose another BESS operation.';
   const Pmin=msg?null:solve(b,s);
   if(!msg&&Pmin===null)msg='No solar size can recharge the battery with these inputs. Check the hourly profile and yield.';
   err.hidden=!msg;err.textContent=msg;
   if(msg){['rBess','rPv'].forEach(id=>$(id).textContent='–');['rBessD','rPvD','rBessPick','rPvPick'].forEach(id=>$(id).textContent='–');
-    $('facts').innerHTML='';$('chart1').innerHTML='';$('chart2').innerHTML='';$('calcTbl').innerHTML='';$('sweepTbl').innerHTML='';$('selRead').innerHTML='';model=null;renderCeb(b,s,null);return;}
+    $('facts').innerHTML='';$('chart1').innerHTML='';$('chart2').innerHTML='';$('calcTbl').innerHTML='';$('sweepTbl').innerHTML='';$('selRead').innerHTML='';model=null;renderCeb(b,s,null);renderPcs();return;}
 
   const atMin=at(b,s,Pmin);
+  const dec=v=>v%1?1:0;
   const modW=Math.max(s.moduleW,1)/1000;
-  const nMod=Math.max(1,Math.ceil(Pmin/modW-1e-9));
-  const Pp=nMod*modW;
+  const nModMin=Math.max(1,Math.ceil(Pmin/modW-1e-9));
+  const PpMin=nModMin*modW;
+  const pvM=s.pvMargin/100,bM=s.bessMargin/100;
+  const Prec=Pmin*(1+pvM);
+  const nMod=Math.max(nModMin,Math.ceil(Prec/modW-1e-9));
+  const Pp=nMod*modW;                         // recommended PV
   const atP=at(b,s,Pp);
   const unit=Math.max(s.batUnit,0.1);
-  const nBat=Math.max(1,Math.ceil(atP.bess/unit-1e-9));
+  const nBatMin=Math.max(1,Math.ceil(atMin.bess/unit-1e-9));
+  const bessRec=atMin.bess*(1+bM);
+  const nBatE=Math.max(nBatMin,Math.ceil(bessRec/unit-1e-9));
+  const pl=peakLoad(s),cMax=s.batC>0?s.batC:0.5;
+  const bessPow=pl?pl.kw/cMax:0;                                  // capacity needed to deliver peak power
+  const nBatP=pl?Math.ceil(bessPow/unit-1e-9):0;
+  const nBat=Math.max(nBatE,nBatP);                               // recommended BESS units
+  const bessBy=nBatP>nBatE?'power':'energy';
   const offsetPv=s.avgMonthly>0?b.totalM/s.avgMonthly:NaN;  // Sheet1 I11
 
-  model={b,s,Pmin,atMin,Pp,atP,nMod,nBat,unit,offsetPv};
+  model={b,s,Pmin,atMin,Pp,atP,nMod,nBat,unit,offsetPv,nModMin,PpMin,nBatMin,Prec,bessRec,bessPow,bessBy,cMax,pl};
 
   $('rBess').textContent=fmt(atMin.bess,1);
-  $('rBessD').textContent=fmt(atMin.usable,1)+' kWh usable per day at '+fmt(s.dod,0)+' % DOD';
-  $('rBessPick').textContent=nBat+' × '+fmt(unit,unit%1?1:0)+' kWh = '+fmt(nBat*unit,unit%1?1:0)+' kWh';
+  $('rBessD').textContent=`${fmt(atMin.usable,1)} kWh from the battery per day at ${fmt(s.dod,0)} % DOD. Minimum pick ${nBatMin} × ${fmt(unit,dec(unit))} kWh.`;
+  $('rBessPickL').textContent=bessBy==='power'?`Recommended · sized for ${fmt(pl.kw,1)} kW peak`:`Recommended +${fmt(s.bessMargin,0)} %`;
+  $('rBessPick').textContent=nBat+' × '+fmt(unit,dec(unit))+' kWh = '+fmt(nBat*unit,dec(unit))+' kWh';
   $('rPv').textContent=fmt(Pmin,2);
-  $('rPvD').textContent='Smallest array that can recharge the battery on a '+fmt(s.minYield,2)+' kWh/kWp day';
+  $('rPvD').textContent=`Recharges the battery on a ${fmt(s.minYield,2)} kWh/kWp day. Minimum pick ${nModMin} × ${fmt(s.moduleW,0)} Wp = ${fmt(PpMin,2)} kWp.`;
+  $('rPvPickL').textContent=`Recommended +${fmt(s.pvMargin,0)} %`;
   $('rPvPick').textContent=nMod+' × '+fmt(s.moduleW,0)+' Wp = '+fmt(Pp,2)+' kWp';
 
   $('facts').innerHTML=[
     ['Monthly consumption',fmt(b.totalM,0),'kWh'],
-    ['Daytime load',fmt(b.dh,2),'kW avg'],
-    ['Night load',fmt(b.nh,2),'kW avg'],
-    ['Night energy 18:00–06:00',fmt(b.nightE,1),'kWh'],
+    ['Battery energy per day',fmt(atMin.usable,1),'kWh'],
+    ['Still from CEB',fmt(b.gridD,1),'kWh/day'],
+    b.serveDay?['Daytime load',fmt(b.dh,2),'kW avg']:['Peak-time load',fmt(b.pk,2),'kW avg'],
     ['Solar for net-zero units',fmt(offsetPv,2),'kWp'],
     ['Avg generation at '+fmt(Pp,2)+' kWp',fmt(Pp*s.avgMonthly,0),'kWh/mo'],
   ].map(f=>`<div class="fact"><div class="k">${f[0]}</div><div class="v">${f[1]} <small>${f[2]}</small></div></div>`).join('');
@@ -498,7 +597,7 @@ function update(resetSel){
   const sl=$('selSize');sl.max=xmax;sl.step=xmax>200?1:0.1;
   if(resetSel||selected===null||selected>xmax)selected=Pp;
   sl.value=selected;
-  renderCalc();renderSweep();renderSel();renderCeb(b,s,Pp);
+  renderCalc();renderSweep();renderSel();renderCeb(b,s,Pp);renderPcs();
 }
 
 function renderSel(){
@@ -509,8 +608,9 @@ function renderSel(){
   $('selRead').innerHTML=`<span class="pill ${r.ok?'ok':'no'}">${r.ok?'Can recharge battery':'Solar capacity not enough'}</span>
     <span>BESS <b>${fmt(r.bess,1)} kWh</b></span><span>Battery use <b>${fmt(r.usable,1)} kWh/day</b></span>
     <span>Surplus solar <b>${fmt(r.excess,1)} kWh/day</b></span>`;
+  $('c1Lead').textContent=model.b.serveDay?'The battery must be refilled each day from surplus solar. Below the crossing point the array cannot recharge it. Above it, a larger array also trims the daytime shortfall, so the battery needed falls slightly.':'The battery must be refilled each day from solar. Below the crossing point the array cannot recharge it. In Peak only the battery need does not change with array size.';
   drawChart1(selected);drawChart2(r);
-  $('flowLead').textContent='Hour by hour at '+fmt(selected,2)+' kWp on a '+fmt(s.minYield,2)+' kWh/kWp design day. Teal is the energy the battery has to deliver.';
+  $('flowLead').textContent=`Half-hour by half-hour at ${fmt(selected,2)} kWp on a ${fmt(s.minYield,2)} kWh/kWp design day, operating ${SC_L[model.b.scen]}. Teal is what the battery delivers; grey comes from CEB.`;
 }
 
 // ---------- chart 1 ----------
@@ -546,48 +646,76 @@ function chart1Svg(sel){
 
 // ---------- chart 2 ----------
 function drawChart2(r){$('chart2').innerHTML=chart2Svg(r);}
+function flowSlots(r){
+  const {b}=model,out=[];
+  for(let i=0;i<48;i++){
+    const t=i/2,per=(t>=5.5&&t<18.5)?'day':(t>=18.5&&t<22.5)?'peak':'off';
+    const L=per==='day'?b.dh:per==='peak'?b.pk:b.op;
+    const g=(t>=6&&t<18)?r.gen[Math.floor(t)-6]:0;
+    const battPer=per==='peak'||(per==='day'&&b.scen!=='peak')||(per==='off'&&b.scen==='all');
+    let direct=0,batt=0,grid=0,chg=0;
+    if(b.serveDay&&per==='day'){direct=Math.min(g,L);chg=Math.max(g-L,0);batt=L-direct;}
+    else{chg=g;if(battPer)batt=L;else grid=L;}
+    out.push({t,per,L,g,direct,batt,grid,chg});
+  }
+  return out;
+}
 function chart2Svg(r){
-  const {b}=model;
-  const W=680,H=280,L=46,R=26,T=16,B=40,pw=W-L-R,ph=H-T-B;
-  const ymax=niceCeil(Math.max(Math.max(...r.gen),b.dh,b.nh,0.1)*1.1,5);
-  const X=h=>L+h/24*pw, Y=v=>T+ph-v/ymax*ph, bw=pw/24;
-  let o=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hourly solar generation, load and battery supply">`;
-  o+=`<rect class="nightbg" x="${X(0)}" y="${T}" width="${X(6)-X(0)}" height="${ph}"/><rect class="nightbg" x="${X(18)}" y="${T}" width="${X(24)-X(18)}" height="${ph}"/>`;
+  const sl=flowSlots(r);
+  const W=680,H=280,L=46,R=26,T=22,B=40,pw=W-L-R,ph=H-T-B;
+  const ymax=niceCeil(Math.max(0.1,...sl.map(x=>x.L+x.chg))*1.08,5);
+  const X=h=>L+h/24*pw, Y=v=>T+ph-v/ymax*ph, bw=pw/48;
+  const hh=t=>{const h=Math.floor(t),m=t%1?'30':'00';return String(h).padStart(2,'0')+':'+m;};
+  let o=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Half-hourly site load and how it is supplied">`;
   ticks(ymax,5).forEach(v=>{o+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${fmt(v,v%1?1:0)}</text>`;});
-  // night battery supply
-  [[0,6],[18,24]].forEach(([a,z])=>{o+=`<rect class="bsup" x="${X(a)}" y="${Y(b.nh)}" width="${X(z)-X(a)}" height="${Y(0)-Y(b.nh)}"><title>Battery supplies ${fmt(b.nh,2)} kWh each hour</title></rect>`;});
-  r.gen.forEach((g,i)=>{
-    const h=6+i,x=X(h)+1.5,w=bw-3,used=Math.min(g,b.dh);
-    o+=`<rect class="used" x="${x}" y="${Y(used)}" width="${w}" height="${Y(0)-Y(used)}"><title>${HRS[i]}: solar ${fmt(g,2)} kWh</title></rect>`;
-    if(g>b.dh)o+=`<rect class="over" x="${x}" y="${Y(g)}" width="${w}" height="${Y(b.dh)-Y(g)}"><title>${HRS[i]}: surplus ${fmt(g-b.dh,2)} kWh</title></rect>`;
-    else o+=`<rect class="bsup" x="${x}" y="${Y(b.dh)}" width="${w}" height="${Y(g)-Y(b.dh)}"><title>${HRS[i]}: battery ${fmt(b.dh-g,2)} kWh</title></rect>`;
+  sl.forEach(x=>{
+    const x0=X(x.t)+0.6,w=bw-1.2;let base=0;
+    const seg=(v,cls,lab)=>{if(v<=1e-9)return;o+=`<rect class="${cls}" x="${x0.toFixed(1)}" y="${Y(base+v).toFixed(1)}" width="${w.toFixed(1)}" height="${(Y(base)-Y(base+v)).toFixed(1)}"><title>${hh(x.t)}–${hh(x.t+0.5)} ${lab} ${fmt(v,2)} kW</title></rect>`;base+=v;};
+    seg(x.direct,'used','solar to load');seg(x.batt,'bsup','battery to load');seg(x.grid,'ceb','CEB to load');seg(x.chg,'over','solar charging battery');
   });
-  const d=`M${X(0)} ${Y(b.nh)}H${X(6)}V${Y(b.dh)}H${X(18)}V${Y(b.nh)}H${X(24)}`;
+  let d='';sl.forEach((x,i)=>{d+=(i?`H${X(x.t).toFixed(1)}V`:`M${X(0)} `)+Y(x.L).toFixed(1);});d+=`H${X(24)}`;
   o+=`<path class="load" d="${d}"/>`;
+  [5.5,18.5,22.5].forEach(t=>{o+=`<line class="pb" x1="${X(t)}" x2="${X(t)}" y1="${T-4}" y2="${T+ph}"/>`;});
+  o+=`<text class="pl" x="${X(2.75)}" y="${T-8}" text-anchor="middle">Off-peak</text><text class="pl" x="${X(12)}" y="${T-8}" text-anchor="middle">Day</text><text class="pl" x="${X(20.5)}" y="${T-8}" text-anchor="middle">Peak</text>`;
   o+=`<line class="ax" x1="${L}" x2="${W-R}" y1="${T+ph}" y2="${T+ph}"/>`;
   for(let h=0;h<=24;h+=3)o+=`<text x="${X(h)}" y="${T+ph+16}" text-anchor="middle">${String(h).padStart(2,'0')}:00</text>`;
-  o+=`<text x="${X(3)}" y="${T+14}" text-anchor="middle">night · battery</text><text x="${X(21)}" y="${T+14}" text-anchor="middle">night · battery</text>`;
-  o+=`<text transform="translate(12 ${T+ph/2}) rotate(-90)" text-anchor="middle">kWh per hour</text>`;
+  o+=`<text transform="translate(12 ${T+ph/2}) rotate(-90)" text-anchor="middle">kW (kWh per hour)</text>`;
   o+='</svg>';
   return o;
 }
 
 // ---------- tables ----------
 function calcRows(){
-  const {b,s,Pmin,atMin}=model;
-  const day=s.mode==='tou';
-  const rows=[
-    ['Daytime hourly load', day?`Day ${fmt(s.day,0)} ÷ ${fmt(b.days,0)} d ÷ 13 h`:`${fmt(s.monthly,0)} × ${fmt(s.dayShare,0)} % ÷ ${fmt(b.days,0)} d ÷ 13 h`, fmt(b.dh,3)+' kWh/h','Sheet2 G19'],
-    ['Night energy, 18:00–06:00', day?`(Peak ${fmt(s.peak,0)} + Off-peak ${fmt(s.off,0)}) ÷ ${fmt(b.days,0)} d + 1 h of day load`:`${fmt(s.monthly,0)} × ${fmt(100-s.dayShare,0)} % ÷ ${fmt(b.days,0)} d + 1 h of day load`, fmt(b.nightE,2)+' kWh',''],
-    ['Night hourly load','Night energy ÷ 12 h',fmt(b.nh,3)+' kWh/h','Sheet2 G20'],
-    ['Profile scaling',`Design-day yield ${fmt(s.minYield,2)} ÷ clear-day total ${fmt(b.psum,2)}`,fmt(b.scale,4),'Sheet2 E16/D16'],
-    ['Daytime shortfall at '+fmt(Pmin,2)+' kWp','Hours where solar < daytime load, summed',fmt(atMin.deficit,2)+' kWh','Sheet2 H16'],
-    ['Battery energy per day','Shortfall + 12 × night hourly load',fmt(atMin.usable,2)+' kWh','Sheet2 G21'],
-    ['Energy to recharge',`Battery energy ÷ ${fmt(s.eff,0)} % efficiency`,fmt(atMin.charge,2)+' kWh',''],
-    ['Surplus solar for charging','Hours where solar > daytime load, summed',fmt(atMin.excess,2)+' kWh','Sheet2 I16'],
-    ['Minimum solar system','Smallest size where surplus ≥ energy to recharge',fmt(Pmin,2)+' kWp','C42',1],
-    ['Required BESS capacity',`Battery energy ÷ ${fmt(s.dod,0)} % DOD`,fmt(atMin.bess,2)+' kWh','C41',1],
-  ];
+  const {b,s,Pmin,atMin,Pp,nMod,nBat,unit,Prec,bessRec}=model;
+  const tou=s.mode==='tou',xl=b.scen==='all',ref=x=>xl?x:'',d0=v=>fmt(v,0),days=d0(b.days);
+  const nightPct=100-s.dayShare;
+  const dayTxt=tou?`Day ${d0(s.day)} ÷ ${days} d ÷ 13 h`:`${d0(s.monthly)} × ${d0(s.dayShare)} % ÷ ${days} d ÷ 13 h`;
+  const peakTxt=tou?`Peak ${d0(s.peak)} ÷ ${days} d`:`${d0(s.monthly)} × ${d0(nightPct)} % × 4/11 h ÷ ${days} d`;
+  const offTxt=tou?`Off-peak ${d0(s.off)} ÷ ${days} d`:`${d0(s.monthly)} × ${d0(nightPct)} % × 7/11 h ÷ ${days} d`;
+  const rows=[['BESS operation',SC_HINT[b.scen],SC_L[b.scen],'']];
+  if(b.serveDay)rows.push(['Daytime hourly load',dayTxt,fmt(b.dh,3)+' kWh/h',ref('Sheet2 G19')]);
+  if(b.scen==='all'){
+    rows.push(['Night energy, 18:00–06:00',tou?`(Peak ${d0(s.peak)} + Off-peak ${d0(s.off)}) ÷ ${days} d + 1 h of day load`:`${d0(s.monthly)} × ${d0(nightPct)} % ÷ ${days} d + 1 h of day load`,fmt(b.nightE,2)+' kWh','']);
+    rows.push(['Night hourly load','Night energy ÷ 12 h',fmt(b.nh,3)+' kWh/h','Sheet2 G20']);
+  }else if(b.scen==='daypeak'){
+    rows.push(['Peak-time energy, 18:30–22:30',peakTxt,fmt(b.peakD,2)+' kWh','']);
+    rows.push(['Battery energy outside solar hours','Peak-time energy + 1 h of day load (05:30–06:00, 18:00–18:30)',fmt(b.battOut,2)+' kWh','']);
+  }else{
+    rows.push(['Peak-time energy, 18:30–22:30',peakTxt,fmt(b.peakD,2)+' kWh','']);
+    rows.push(['Peak-time hourly load','Peak-time energy ÷ 4 h',fmt(b.pk,3)+' kWh/h','']);
+  }
+  rows.push(['Profile scaling',`Design-day yield ${fmt(s.minYield,2)} ÷ clear-day total ${fmt(b.psum,2)}`,fmt(b.scale,4),ref('Sheet2 E16/D16')]);
+  if(b.serveDay)rows.push(['Daytime shortfall at '+fmt(Pmin,2)+' kWp','Hours where solar < daytime load, summed',fmt(atMin.deficit,2)+' kWh',ref('Sheet2 H16')]);
+  rows.push(['Battery energy per day',b.scen==='all'?'Shortfall + 12 × night hourly load':b.scen==='daypeak'?'Shortfall + energy outside solar hours':'Peak-time energy',fmt(atMin.usable,2)+' kWh',ref('Sheet2 G21')]);
+  rows.push(['Energy to recharge',`Battery energy ÷ ${d0(s.eff)} % efficiency`,fmt(atMin.charge,2)+' kWh','']);
+  rows.push(['Solar available for charging',b.serveDay?'Hours where solar > daytime load, summed':'All design-day solar output (solar does not supply the site)',fmt(atMin.excess,2)+' kWh',ref('Sheet2 I16')]);
+  rows.push(['Minimum solar system','Smallest size where solar for charging ≥ energy to recharge',fmt(Pmin,2)+' kWp','C42',1]);
+  rows.push(['Required BESS capacity',`Battery energy ÷ ${d0(s.dod)} % DOD`,fmt(atMin.bess,2)+' kWh','C41',1]);
+  rows.push(['Recommended solar system',`${fmt(Pmin,2)} kWp × (1 + ${d0(s.pvMargin)} % margin) = ${fmt(Prec,2)} kWp, rounded up to ${nMod} × ${d0(s.moduleW)} Wp`,fmt(Pp,2)+' kWp','',1]);
+  const {bessPow,bessBy,cMax,pl}=model,uD=unit%1?1:0;
+  if(pl)rows.push(['BESS needed for peak power',`Peak load ${fmt(pl.kw,2)} kW ÷ ${fmt(cMax,2)} C max discharge`,fmt(bessPow,2)+' kWh','']);
+  rows.push(['Recommended BESS',(pl?`Larger of energy: ${fmt(atMin.bess,2)} kWh × (1 + ${d0(s.bessMargin)} %) = ${fmt(bessRec,2)} kWh, and power: ${fmt(bessPow,2)} kWh; `:`${fmt(atMin.bess,2)} kWh × (1 + ${d0(s.bessMargin)} % margin) = ${fmt(bessRec,2)} kWh, `)+`rounded up to ${nBat} × ${fmt(unit,uD)} kWh`+(bessBy==='power'?' (set by peak power)':''),fmt(nBat*unit,uD)+' kWh','',1]);
+  if(b.gridD>0)rows.push(['Energy still taken from CEB',b.scen==='daypeak'?offTxt:`Day + off-peak units ÷ ${days} d`,fmt(b.gridD,2)+' kWh/day','']);
   return rows;
 }
 function renderCalc(){const rows=calcRows();
@@ -610,6 +738,51 @@ function renderSweep(){
   sweepData().forEach(({P,r,cls,dec})=>{h+=`<tr class="${cls}"><td class="n">${fmt(P,dec)}</td><td class="n">${fmt(r.usable,2)}</td><td class="n">${fmt(r.bess,2)}</td><td class="n">${fmt(r.excess,2)}</td><td>${r.ok?'OK':'Solar capacity not enough'}</td></tr>`;});
   $('sweepTbl').innerHTML=h+'</tbody>';
 }
+function peakLoad(s){
+  const one=s.phase==='1',V=one?230:400,k3=one?1:Math.sqrt(3);
+  let kva,amp;
+  if(s.pcsBasis==='kva'){kva=s.maxKva;amp=kva*1000/(k3*V);}else{amp=s.maxAmp;kva=k3*V*amp/1000;}
+  if(!(kva>0))return null;
+  const pf=Math.min(Math.max(s.loadPf||0.8,0.1),1);
+  return {one,V,k3,amp,kva,pf,kw:kva*pf};
+}
+function pcsData(s,m){
+  const pl=peakLoad(s);if(!pl)return null;
+  const {one,V,k3,amp,kva,pf,kw}=pl;
+  const mg=s.pcsMargin/100,reqKva=kva*(1+mg);
+  const std=PCS_STD.find(x=>x>=reqKva-1e-9)||Math.ceil(reqKva/100)*100;
+  const outAmp=std*1000/(k3*V);
+  const bessKwh=m?m.nBat*m.unit:NaN;
+  const c=bessKwh>0?kw/bessKwh:NaN;
+  const dcac=m?m.Pp/std:NaN;
+  const cMax=s.batC>0?s.batC:0.5;
+  const cTxt=!isFinite(c)?'–':c<=cMax+1e-9?`OK, within the ${fmt(cMax,2)} C battery rating`:`Above the ${fmt(cMax,2)} C battery rating: add batteries or use a higher-rated battery`;
+  const cLvl=!isFinite(c)?'':c<=cMax+1e-9?'ok':'no';
+  const phaseLbl=one?'1-phase, 230 V':'3-phase, 400 V';
+  const rows=[
+    ['Supply',s.pcsBasis==='kva'?'Max demand entered in kVA':'Max load current entered per phase',phaseLbl],
+    ['Peak load current',s.pcsBasis==='kva'?`${fmt(kva,1)} kVA ÷ (${one?'':'√3 × '}${V} V)`:'Entered value',fmt(amp,1)+' A'],
+    ['Peak load apparent power',s.pcsBasis==='kva'?'Entered value':`${one?'':'√3 × '}${V} V × ${fmt(amp,1)} A`,fmt(kva,2)+' kVA'],
+    ['Peak load active power',`${fmt(kva,2)} kVA × ${fmt(pf,2)} PF`,fmt(kw,2)+' kW'],
+    ['Required PCS rating',`Peak kVA × (1 + ${fmt(s.pcsMargin,0)} % margin)`,fmt(reqKva,2)+' kVA'],
+    ['Suggested PCS / inverter','Next common rating at or above the requirement',fmt(std,std%1?1:0)+' kVA','',1],
+    ['PCS output current at rating',`${fmt(std,std%1?1:0)} kVA ÷ (${one?'':'√3 × '}${V} V), per phase`,fmt(outAmp,1)+' A'],
+    ['Battery discharge at peak load',`${fmt(kw,2)} kW ÷ ${fmt(bessKwh,bessKwh%1?1:0)} kWh recommended BESS · ${cTxt}`,fmt(c,2)+' C'],
+    ['PV to inverter ratio',`${fmt(m?m.Pp:NaN,2)} kWp ÷ ${fmt(std,std%1?1:0)} kVA · check the inverter's max PV input`,fmt(dcac,2)],
+  ];
+  if(one&&std>10)rows.push(['Note','Single-phase units above 10 kVA are uncommon; consider a 3-phase PCS','Check']);
+  return {one,V,amp,kva,kw,pf,reqKva,std,outAmp,bessKwh,c,cTxt,cLvl,dcac,phaseLbl,rows};
+}
+function renderPcs(){
+  const d=model?pcsData(state,model):null;
+  $('pcsCard').hidden=!d;$('pcsPlate').classList.toggle('off',!d);
+  if(!d){$('rPcs').textContent='–';$('rPcsD').textContent=model?'Enter the max load current or max kVA to size the PCS / inverter':'–';$('rPcsPick').textContent='–';$('pcsTbl').innerHTML='';return;}
+  $('rPcs').textContent=fmt(d.std,d.std%1?1:0);
+  $('rPcsD').textContent=`Required ${fmt(d.reqKva,1)} kVA incl. ${fmt(state.pcsMargin,0)} % margin · battery at ${fmt(d.c,2)} C`;
+  $('rPcsPick').textContent=`${fmt(d.amp,0)} A · ${fmt(d.kva,1)} kVA (${d.one?'1-ph':'3-ph'})`;
+  $('pcsTbl').innerHTML='<tbody>'+d.rows.map(r=>`<tr class="${r[4]?'key':''}"><td>${r[0]}<span class="f">${r[1]}</span></td><td class="n">${r[2]}</td></tr>`).join('')+
+    `<tr><td>Battery discharge check</td><td class="n"><span class="pill ${d.cLvl==='ok'?'ok':'no'}">${d.cLvl==='ok'?'OK':'Too high'}</span></td></tr></tbody>`;
+}
 function cebData(b,s,P){
   const hrs=CEB_H[s.cebTime]||0;
   const ceb=s.kva*s.pf*(s.loadPct/100)*hrs;
@@ -625,7 +798,7 @@ function cebData(b,s,P){
   ]};
 }
 function renderCeb(b,s,P){
-  const open=$('cebBox').open;$('cebCard').hidden=!open;if(!open)return;
+  const open=!!s.cebOn;$('cebCard').hidden=!open;if(!open)return;
   const d=cebData(b,s,P);
   $('cebTbl').innerHTML='<tbody>'+d.rows.map(r=>`<tr><td>${r[0]}<span class="f">${r[1]}</span></td><td class="n">${r[2]}</td></tr>`).join('')+
   `<tr class="key"><td>Result</td><td class="n"><span class="pill ${d.ok?'ok':'no'}">${d.status}</span></td></tr></tbody>`;
@@ -636,7 +809,11 @@ $('form').addEventListener('input',e=>{if(e.target.id!=='selSize')update(true);}
 $('form').addEventListener('submit',e=>e.preventDefault());
 $('modeTou').addEventListener('click',()=>setMode('tou'));
 $('modeFlat').addEventListener('click',()=>setMode('flat'));
-$('cebBox').addEventListener('toggle',()=>{if(model)renderCeb(model.b,state,model.Pp);else renderCeb(base(state),state,null);});
+$('scAll').addEventListener('click',()=>setScen('all'));
+$('scDayPeak').addEventListener('click',()=>setScen('daypeak'));
+$('scPeak').addEventListener('click',()=>setScen('peak'));
+$('basisAmp').addEventListener('click',()=>setBasis('amp'));
+$('basisKva').addEventListener('click',()=>setBasis('kva'));
 $('selSize').addEventListener('input',e=>{selected=+e.target.value;renderSel();});
 $('resetBtn').addEventListener('click',()=>{state=JSON.parse(JSON.stringify(DEFAULTS));fill();update(true);toast('Reset to example values');});
 $('copyBtn').addEventListener('click',()=>{
@@ -646,14 +823,20 @@ $('copyBtn').addEventListener('click',()=>{
     'SOLAR BATTERY SIZING',
     s.mode==='tou'?`Consumption: Peak ${s.peak} / Day ${s.day} / Off-peak ${s.off} kWh per month`:`Consumption: ${s.monthly} kWh per month, ${s.dayShare}% daytime`,
     `Design-day yield: ${s.minYield} kWh/kWp · DOD ${s.dod}% · Efficiency ${s.eff}%`,
+    `BESS operation: ${SC_L[b.scen]}`,
     '',
-    `Required BESS capacity: ${fmt(atMin.bess,1)} kWh (${fmt(atMin.usable,1)} kWh usable per day)`,
+    `Required BESS capacity: ${fmt(atMin.bess,1)} kWh (${fmt(atMin.usable,1)} kWh from the battery per day)`,
     `Minimum solar system: ${fmt(Pmin,2)} kWp`,
-    `Selection: ${nMod} x ${s.moduleW} Wp = ${fmt(Pp,2)} kWp; ${nBat} x ${unit} kWh battery = ${fmt(nBat*unit,1)} kWh`,
-    `Night load ${fmt(b.nh,2)} kW avg, daytime load ${fmt(b.dh,2)} kW avg`,
-  ].join('\n');
+    `Recommended PV (+${s.pvMargin}%): ${nMod} x ${s.moduleW} Wp = ${fmt(Pp,2)} kWp`,
+    model.bessBy==='power'?`Recommended BESS (sized for ${fmt(model.pl.kw,1)} kW peak at ${model.cMax} C): ${nBat} x ${unit} kWh = ${fmt(nBat*unit,1)} kWh`:`Recommended BESS (+${s.bessMargin}%): ${nBat} x ${unit} kWh = ${fmt(nBat*unit,1)} kWh`,
+    `Still from CEB: ${fmt(b.gridD,1)} kWh/day`,
+  ];
+  const pc=pcsData(s,model);
+  if(pc)t.push(`PCS / inverter: ${fmt(pc.std,pc.std%1?1:0)} kVA suggested (peak ${fmt(pc.amp,0)} A / ${fmt(pc.kva,1)} kVA ${pc.phaseLbl}, required ${fmt(pc.reqKva,1)} kVA incl. ${s.pcsMargin}% margin; battery ${fmt(pc.c,2)} C)`);
+  if(s.cebOn){const cd=cebData(b,s,Pp);t.push(`CEB connection check: ${cd.status}`);}
+  const tt=t.join('\n');
   const done=()=>toast('Results copied');
-  try{navigator.clipboard.writeText(t).then(done,()=>fallbackCopy(t));}catch(e){fallbackCopy(t);}
+  try{navigator.clipboard.writeText(tt).then(done,()=>fallbackCopy(tt));}catch(e){fallbackCopy(tt);}
 });
 function fallbackCopy(t){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy');}catch(e){}ta.remove();toast(ok?'Results copied':'Copy blocked here. Select the figures on the page instead.');}
 let tt;function toast(m){const el=$('toast');el.textContent=m;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,2200);}
@@ -706,7 +889,7 @@ const PRINT_CSS=`<style>text{font-family:Helvetica,Arial,sans-serif;font-size:11
 .ax{stroke:#C9D1D9;stroke-width:1}.gl{stroke:#E4E9EE;stroke-width:1}.need{fill:none;stroke:#0E7562;stroke-width:2.5}.surplus{fill:none;stroke:#CF8306;stroke-width:2.5}
 .bad{fill:#FBE3D6}.badt{fill:#B93D0B;font-size:13px;font-weight:bold}.vmin{stroke:#15202B;stroke-width:1.2;stroke-dasharray:4 3}.lbl{fill:#15202B;font-weight:bold}
 .sel{stroke:#5A6672;stroke-width:1}.dot{fill:#FFFFFF;stroke:#15202B;stroke-width:2}.dotsel{fill:#15202B}.nightbg{fill:#EEF1F5}.used{fill:#F5DDAA}.over{fill:#CF8306}
-.bsup{fill:#BFE3D9}.load{fill:none;stroke:#15202B;stroke-width:2}</style>`;
+.bsup{fill:#BFE3D9}.load{fill:none;stroke:#15202B;stroke-width:2}.ceb{fill:#CDD4DC}.pb{stroke:#5A6672;stroke-width:1;stroke-dasharray:3 3;opacity:.6}.pl{fill:#15202B;font-weight:bold}</style>`;
 function svgToJpeg(svg,w,h){
   return new Promise((resolve,reject)=>{
     const src=svg.replace('<svg ',`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" `).replace(/(<svg[^>]*>)/,'$1'+PRINT_CSS).replace(/<title>.*?<\/title>/g,'');
@@ -720,11 +903,11 @@ function svgToJpeg(svg,w,h){
 }
 
 async function buildReport(){
-  const {b,s,Pmin,atMin,Pp,atP,nMod,nBat,unit,offsetPv}=model;
+  const {b,s,Pmin,atMin,Pp,atP,nMod,nBat,unit,offsetPv,nModMin,PpMin,nBatMin}=model;
   const selR=at(b,s,selected);
   const [img1,img2]=await Promise.all([svgToJpeg(chart1Svg(selected),680,300),svgToJpeg(chart2Svg(selR),680,280)]);
   const pdf=new MiniPDF();
-  const K={ink:[21,32,43],muted:[90,102,114],line:[213,220,227],sun:[207,131,6],sunSoft:[245,221,170],batt:[14,117,98],battSoft:[191,227,217],warn:[185,61,11],warnSoft:[251,227,214],okSoft:[212,238,231],band:[238,241,244]};
+  const K={ink:[21,32,43],muted:[90,102,114],line:[213,220,227],sun:[207,131,6],sunSoft:[245,221,170],batt:[14,117,98],battSoft:[191,227,217],warn:[185,61,11],warnSoft:[251,227,214],okSoft:[212,238,231],band:[238,241,244],ceb:[205,212,220]};
   const M=16,CW=210-2*M,BOT=297-18;
   let y=M;
   const ensure=h=>{if(y+h>BOT){pdf.addPage();y=M;}};
@@ -736,8 +919,7 @@ async function buildReport(){
   pdf.text('Solar Battery Sizing Report',M,y+7,{size:20,bold:true});
   pdf.text(dateStr,M+CW,y+7,{size:9,color:K.muted,align:'right'});
   y+=12.5;
-  pdf.text('BESS and minimum PV array to carry the night load and daytime shortfall on a low-yield design day.',M,y+3,{size:9,color:K.muted});
-  y+=8;
+  {const ls=pdf.wrap(`BESS operation: ${SC_L[b.scen]}. ${SC_HINT[b.scen]}`,CW,9);ls.forEach((l,i)=>pdf.text(l,M,y+3+i*4.2,{size:9,color:K.muted}));y+=4+ls.length*4.2;}
   pdf.rect(M,y,CW,15,{fill:K.band});
   const fw=CW/4;
   [['Project / client',s.project],['Site location',s.site],['Prepared by',s.preparedBy],['Reference no.',s.refNo]].forEach((f,i)=>{
@@ -748,21 +930,24 @@ async function buildReport(){
   y+=21;
 
   // result plates
-  const bw=(CW-6)/2,bh=37;
-  const plate=(x,soft,label,ref,num,u,detail,pick)=>{
+  const pcR=pcsData(s,model);
+  const nPl=pcR?3:2,bw=(CW-6*(nPl-1))/nPl,bh=41;
+  const plate=(x,soft,label,ref,num,u,detail,pick,pickL)=>{
+    const big=nPl===3?24:28;
     pdf.rect(x,y,bw,7,{fill:soft});
     pdf.rect(x,y,bw,bh,{stroke:K.ink,lw:0.5});
     pdf.text(label,x+3.5,y+4.8,{size:7.5,bold:true});
     pdf.text(ref,x+bw-3.5,y+4.8,{size:7.5,color:K.muted,align:'right'});
-    const nw=pdf.text(num,x+3.5,y+19.5,{size:28,bold:true});
+    const nw=pdf.text(num,x+3.5,y+19.5,{size:big,bold:true});
     pdf.text(u,x+3.5+nw+2,y+19.5,{size:12,bold:true,color:K.muted});
     pdf.text(detail,x+3.5,y+25.5,{size:8,color:K.muted,maxW:bw-7});
     pdf.line(x,y+29,x+bw,y+29,K.line,0.3,[1,1]);
-    pdf.text('Selection',x+3.5,y+33.8,{size:8.5,color:K.muted});
-    pdf.text(pick,x+bw-3.5,y+33.8,{size:8.5,bold:true,align:'right'});
+    pdf.text(pickL,x+3.5,y+33.2,{size:7.6,color:K.muted,maxW:bw-7});
+    pdf.text(pick,x+3.5,y+38,{size:nPl===3?8.6:9,bold:true,maxW:bw-7});
   };
-  plate(M,K.battSoft,'REQUIRED BESS CAPACITY','C41',fmt(atMin.bess,1),'kWh',`${fmt(atMin.usable,1)} kWh usable per day at ${fmt(s.dod,0)} % DOD`,`${nBat} × ${fmt(unit,dec)} kWh = ${fmt(nBat*unit,dec)} kWh`);
-  plate(M+bw+6,K.sunSoft,'MINIMUM SOLAR SYSTEM','C42',fmt(Pmin,2),'kWp',`Recharges the battery on a ${fmt(s.minYield,2)} kWh/kWp design day`,`${nMod} × ${fmt(s.moduleW,0)} Wp = ${fmt(Pp,2)} kWp`);
+  plate(M,K.battSoft,'REQUIRED BESS CAPACITY','C41',fmt(atMin.bess,1),'kWh',(nPl===3?`Min. ${nBatMin} × ${fmt(unit,dec)} kWh · ${fmt(s.dod,0)} % DOD`:`${fmt(atMin.usable,1)} kWh/day at ${fmt(s.dod,0)} % DOD · minimum ${nBatMin} × ${fmt(unit,dec)} kWh`),`${nBat} × ${fmt(unit,dec)} kWh = ${fmt(nBat*unit,dec)} kWh`,model.bessBy==='power'?`Recommended · sized for ${fmt(model.pl.kw,1)} kW peak`:`Recommended +${fmt(s.bessMargin,0)} %`);
+  plate(M+bw+6,K.sunSoft,'MINIMUM SOLAR SYSTEM','C42',fmt(Pmin,2),'kWp',(nPl===3?`Min. ${nModMin} × ${fmt(s.moduleW,0)} Wp = ${fmt(PpMin,2)} kWp`:`On a ${fmt(s.minYield,2)} kWh/kWp day · minimum ${nModMin} × ${fmt(s.moduleW,0)} Wp = ${fmt(PpMin,2)} kWp`),`${nMod} × ${fmt(s.moduleW,0)} Wp = ${fmt(Pp,2)} kWp`,`Recommended +${fmt(s.pvMargin,0)} %`);
+  if(pcR)plate(M+2*(bw+6),K.band,'PCS / INVERTER RATING','',fmt(pcR.std,pcR.std%1?1:0),'kVA',`Needs ${fmt(pcR.reqKva,1)} kVA incl. ${fmt(s.pcsMargin,0)} % margin`,`${fmt(pcR.amp,0)} A · ${fmt(pcR.kva,1)} kVA`,'Peak load');
   y+=bh+4;
 
   const pairs=arr=>{const cw=(CW-10)/2;for(let i=0;i<arr.length;i+=2){ensure(6.6);[arr[i],arr[i+1]].forEach((p,j)=>{if(!p)return;const x=M+j*(cw+10);
@@ -773,14 +958,16 @@ async function buildReport(){
   // inputs
   H('Design inputs');
   const tou=s.mode==='tou';
-  const inp=[['Tariff',tou?'TOU':'Non-TOU'],['Billing days',fmt(b.days,0)+' days']];
+  const inp=[['BESS operation',SC_L[b.scen]],['Tariff',tou?'TOU':'Non-TOU'],['Billing days',fmt(b.days,0)+' days']];
   if(tou)inp.push(['Peak units (18:30–22:30)',fmt(s.peak,0)+' kWh/mo'],['Day units (05:30–18:30)',fmt(s.day,0)+' kWh/mo'],['Off-peak units (22:30–05:30)',fmt(s.off,0)+' kWh/mo'],['Total monthly units',fmt(b.totalM,0)+' kWh/mo']);
   else inp.push(['Monthly units',fmt(s.monthly,0)+' kWh/mo'],['Used in daytime',fmt(s.dayShare,0)+' %']);
-  inp.push(['Design-day yield',fmt(s.minYield,2)+' kWh/kWp'],['Average monthly yield',fmt(s.avgMonthly,0)+' kWh/kWp'],['Depth of discharge',fmt(s.dod,0)+' %'],['Round-trip efficiency',fmt(s.eff,0)+' %'],['PV module rating',fmt(s.moduleW,0)+' Wp'],['Battery unit size',fmt(unit,dec)+' kWh']);
+  inp.push(['Design-day yield',fmt(s.minYield,2)+' kWh/kWp'],['Average monthly yield',fmt(s.avgMonthly,0)+' kWh/kWp'],['Depth of discharge',fmt(s.dod,0)+' %'],['Round-trip efficiency',fmt(s.eff,0)+' %'],['PV module rating',fmt(s.moduleW,0)+' Wp'],['Battery unit size',fmt(unit,dec)+' kWh'],['PV design margin',fmt(s.pvMargin,0)+' %'],['BESS design margin',fmt(s.bessMargin,0)+' %']);
+  if(pcR)inp.push(['PCS supply',pcR.phaseLbl],[s.pcsBasis==='kva'?'Max demand':'Max load current (per phase)',s.pcsBasis==='kva'?fmt(s.maxKva,1)+' kVA':fmt(s.maxAmp,0)+' A'],['Load power factor',fmt(pcR.pf,2)],['PCS design margin',fmt(s.pcsMargin,0)+' %'],['Battery max discharge',fmt(model.cMax,2)+' C']);
   pairs(inp);
 
   H('Key figures');
-  pairs([['Daytime load (avg)',fmt(b.dh,2)+' kW'],['Night load (avg)',fmt(b.nh,2)+' kW'],['Night energy 18:00–06:00',fmt(b.nightE,1)+' kWh'],['Battery energy per day',fmt(atMin.usable,1)+' kWh'],
+  pairs([b.serveDay?['Daytime load (avg)',fmt(b.dh,2)+' kW']:['Peak-time load (avg)',fmt(b.pk,2)+' kW'],['Battery energy per day',fmt(atMin.usable,1)+' kWh'],
+    ['Battery energy outside solar hours',fmt(b.battOut,1)+' kWh'],['Still from CEB',fmt(b.gridD,1)+' kWh/day'],
     ['Solar for net-zero units',fmt(offsetPv,2)+' kWp'],[`Avg generation at ${fmt(Pp,2)} kWp`,fmt(Pp*s.avgMonthly,0)+' kWh/mo'],[`BESS at ${fmt(Pp,2)} kWp`,fmt(atP.bess,1)+' kWh'],[`Surplus solar at ${fmt(Pp,2)} kWp`,fmt(atP.excess,1)+' kWh/day']]);
 
   // chart 1
@@ -795,9 +982,9 @@ async function buildReport(){
   const ch2=CW*280/680;
   H(`Selected design: ${fmt(selected,2)} kWp`,ch2+30);
   pairs([['Status',selR.ok?'Can recharge battery':'Solar capacity not enough'],['BESS required',fmt(selR.bess,1)+' kWh'],['Battery energy per day',fmt(selR.usable,1)+' kWh'],['Surplus solar',fmt(selR.excess,1)+' kWh/day']]);
-  y+=3;pdf.text(`Design-day energy flow at ${fmt(selected,2)} kWp (${fmt(s.minYield,2)} kWh/kWp day)`,M,y+3,{size:9,bold:true});y+=5.5;
+  y+=3;pdf.text(`Design-day energy flow at ${fmt(selected,2)} kWp (${fmt(s.minYield,2)} kWh/kWp day, ${SC_L[b.scen]})`,M,y+3,{size:9,bold:true});y+=5.5;
   pdf.image(img2,M,y,CW,ch2);y+=ch2+2;
-  legend([[K.sunSoft,'Solar used directly'],[K.sun,'Surplus solar, charges battery'],[K.battSoft,'Supplied by battery'],[K.ink,'Site load',1]]);
+  legend([[K.sunSoft,'Solar used directly'],[K.sun,'Solar charging the battery'],[K.battSoft,'Supplied by battery'],[K.ceb,'Supplied by CEB grid'],[K.ink,'Site load',1]]);
 
   // calculation table
   const rowTable=(rows,withRef)=>{
@@ -810,11 +997,13 @@ async function buildReport(){
       pdf.text(r[2],M+CW-1.5,y+4.4,{size:8.8,bold:true,align:'right'});
       y+=h;pdf.line(M,y,M+CW,y,K.line,0.25);});
   };
+  if(pcR){H('PCS / inverter sizing',50);rowTable(pcR.rows.map(r=>[r[0],r[1],r[2],'',r[4]]),false);
+    ensure(8);pdf.text('Battery discharge check: '+pcR.cTxt,M+1.5,y+5,{size:8.8,bold:true,color:pcR.cLvl==='ok'?K.batt:K.warn,maxW:CW-3});y+=8;}
   H('Calculation at the minimum solar size',40);
   rowTable(calcRows(),true);
 
   // sweep
-  H('Size sweep',30);
+  H('Size sweep',6+20*5.6+2);
   const cols=[['Solar kWp',26],['Battery use kWh/day',38],['BESS kWh',30],['Surplus kWh/day',34],['Status',CW-128]];
   let cx=M;cols.forEach((c,i)=>{pdf.text(c[0].toUpperCase(),i<4?cx+c[1]-2:cx+3,y+4,{size:6.8,bold:true,color:K.muted,align:i<4?'right':'left'});cx+=c[1];});
   y+=6;pdf.line(M,y,M+CW,y,K.line,0.3);
@@ -824,7 +1013,7 @@ async function buildReport(){
     y+=5.6;pdf.line(M,y,M+CW,y,K.line,0.2);});
 
   // CEB
-  if($('cebBox').open){
+  if(s.cebOn){
     const d=cebData(b,s,Pp);
     H('CEB connection check',40);
     rowTable(d.rows.map(r=>[r[0],r[1],r[2],'']).concat([['Result','Total minimum energy cover vs site daily consumption',d.status,'',1]]),false);
@@ -832,10 +1021,11 @@ async function buildReport(){
 
   // notes
   H('Model notes',30);
-  ['Solar produces from 06:00 to 18:00. During those hours the site draws the day-tariff hourly load. The battery carries the 12 h from 18:00 to 06:00: all peak and off-peak units, plus the one hour of day-tariff load that falls in that window.',
-   'The battery also covers morning and evening hours when solar output is below the load. The array qualifies once its surplus on the design day can put that full amount back into the battery.',
+  [SC_NOTE[b.scen],
+   'The array qualifies once its design-day output available for charging can put the full battery energy back each day.',
+   `Recommended selections add the design margins (PV ${fmt(s.pvMargin,0)} %, BESS ${fmt(s.bessMargin,0)} %) to the minimum sizes, then round up to whole modules and battery units.`,
    'The hourly solar profile is a clear-day 1 kWp curve for Sri Lanka, scaled so the day totals the design-day yield.',
-   'Selections round up to whole PV modules and whole battery units. Battery figures are at the stated DOD and efficiency.'
+   'Battery figures are at the stated DOD and efficiency. When a peak load is entered, the recommended BESS is also large enough to deliver that peak power within the battery\'s max discharge rate.'
   ].forEach(t=>{const ls=pdf.wrap(t,CW-6,8.4);ensure(ls.length*4+2);pdf.text('•',M+1,y+3.6,{size:8.4,color:K.muted});ls.forEach((l,i)=>pdf.text(l,M+5,y+3.6+i*4,{size:8.4,color:K.muted}));y+=ls.length*4+2;});
 
   // footers
@@ -917,12 +1107,13 @@ function histItem(d,names){
   const c1=elx('div');c1.appendChild(elx('div','t',d.project||'Untitled'));
   const sub=[d.site,d.refNo].filter(Boolean).join(' · ');if(sub)c1.appendChild(elx('div','m',sub));
   const who=d.createdBy&&names[d.createdBy]?names[d.createdBy].name:'';
-  c1.appendChild(elx('div','m','Saved '+when(d.updatedAt||d.createdAt)+(who?' by '+who:'')+(d.preparedBy?' · prepared by '+d.preparedBy:'')));
+  c1.appendChild(elx('div','m',SC_L[r.scen||'all']+' · saved '+when(d.updatedAt||d.createdAt)+(who?' by '+who:'')+(d.preparedBy?' · prepared by '+d.preparedBy:'')));
   const c2=elx('div','fig');
   const fig=(k,v)=>{const sp=elx('span',null,k+' ');sp.appendChild(elx('b',null,v));c2.appendChild(sp);};
   fig('BESS',fmt(r.bess,1)+' kWh');fig('Min. solar',fmt(r.pv,2)+' kWp');
-  if(r.nMod)fig('Modules',`${r.nMod} × ${fmt(r.moduleW,0)} Wp`);
-  if(r.nBat)fig('Batteries',`${r.nBat} × ${fmt(r.unit,r.unit%1?1:0)} kWh`);
+  if(r.nMod)fig(r.pvMargin!=null?'Rec. PV':'Modules',`${r.nMod} × ${fmt(r.moduleW,0)} Wp`);
+  if(r.nBat)fig(r.bessMargin!=null?'Rec. BESS':'Batteries',`${r.nBat} × ${fmt(r.unit,r.unit%1?1:0)} kWh`);
+  if(r.pcsKva)fig('PCS',fmt(r.pcsKva,r.pcsKva%1?1:0)+' kVA');
   fig('Units',fmt(r.totalM,0)+' kWh/mo');
   const c3=elx('div','acts');
   if(confirmDel===keyOf(d)){
@@ -944,7 +1135,8 @@ function loadEntry(d){
   const st=JSON.parse(JSON.stringify(DEFAULTS));
   Object.assign(st,d.inputs||{});
   if(!Array.isArray(st.profile)||st.profile.length!==12)st.profile=DEFAULTS.profile.slice();
-  state=st;$('cebBox').open=!!d.cebOpen;
+  if(st.cebOn===undefined||(d.inputs&&d.inputs.cebOn===undefined))st.cebOn=!!d.cebOpen;
+  state=st;
   fill();update(true);
   if(model&&typeof d.selected==='number'&&d.selected>0){selected=Math.min(d.selected,+$('selSize').max);$('selSize').value=selected;renderSel();}
   setLoaded({id:d.id,owner:d.owner},d.project,d.updatedAt||d.createdAt);
@@ -958,10 +1150,10 @@ function setLoaded(ref,project,t){
 $('closeBanner').addEventListener('click',()=>{setLoaded(null);renderHist();});
 
 function entryData(){
-  const {b,Pmin,atMin,Pp,nMod,nBat,unit}=model;
+  const {b,Pmin,atMin,Pp,nMod,nBat,unit,nModMin,nBatMin}=model;
   return {v:1,project:state.project,site:state.site,preparedBy:state.preparedBy,refNo:state.refNo,
-    inputs:JSON.parse(JSON.stringify(state)),cebOpen:$('cebBox').open,selected:+(+selected).toFixed(3),
-    results:{bess:+atMin.bess.toFixed(2),usable:+atMin.usable.toFixed(2),pv:+Pmin.toFixed(3),pvSel:+Pp.toFixed(3),nMod,moduleW:state.moduleW,nBat,unit,totalM:+b.totalM.toFixed(1),mode:state.mode},
+    inputs:JSON.parse(JSON.stringify(state)),cebOpen:!!state.cebOn,selected:+(+selected).toFixed(3),
+    results:{bess:+atMin.bess.toFixed(2),usable:+atMin.usable.toFixed(2),pv:+Pmin.toFixed(3),pvSel:+Pp.toFixed(3),nMod,moduleW:state.moduleW,nBat,unit,totalM:+b.totalM.toFixed(1),mode:state.mode,scen:b.scen,nModMin,nBatMin,bessBy:model.bessBy,pvMargin:state.pvMargin,bessMargin:state.bessMargin,pcsKva:(pcsData(state,model)||{}).std||null},
     updatedAt:Date.now()};
 }
 let saving=false;
