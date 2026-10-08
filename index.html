@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#15202B">
 <meta name="description" content="Sizes the BESS and the minimum PV array from TOU or flat electricity bills, with a PDF report.">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" href="icons/favicon-64.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -76,7 +76,8 @@ button:disabled{opacity:.6;cursor:progress}
 .banner .bb{display:flex;gap:8px;flex-wrap:wrap}
 .hist-tools{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:14px}
 .hist-tools input{max-width:380px}
-.hist-tools p{margin:0;color:var(--muted);font-size:13.5px}
+.hist-tools p{margin:0;color:var(--muted);font-size:13.5px;flex:1 1 auto;text-align:right}
+.hist-bk{display:flex;gap:6px}
 .hlist{display:grid;gap:10px}
 .hitem{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.8fr) auto;gap:10px 20px;align-items:center}
 @media (max-width:860px){.hitem{grid-template-columns:minmax(0,1fr)}}
@@ -206,6 +207,7 @@ tr.short td{color:var(--muted)}
     <div class="hist-tools">
       <input type="search" id="histSearch" placeholder="Search project, site, reference or engineer" aria-label="Search saved calculations">
       <p id="histInfo"></p>
+      <span class="hist-bk" id="histBk" hidden><button type="button" id="bkBtn">Back up</button><button type="button" id="rsBtn">Restore</button><input type="file" id="rsFile" accept="application/json,.json" hidden></span>
     </div>
     <div class="hlist" id="hlist"></div>
   </section>
@@ -871,7 +873,7 @@ async function downloadReport(){
 $('pdfBtn').addEventListener('click',downloadReport);
 
 // ---------- team history (shared db) ----------
-let db=null,usr=null,uid=null,canWrite=true,isAdmin=false,histDocs=[],histState='loading',loaded=null,confirmDel=null,renderTok=0;
+let histLocal=false,db=null,usr=null,uid=null,canWrite=true,isAdmin=false,histDocs=[],histState='loading',loaded=null,confirmDel=null,renderTok=0;
 const keyOf=d=>d.owner+'/'+d.id;
 const itemRef=(owner,id)=>db.doc('teamcalcs/'+owner+'/items/'+id);
 const mayChange=d=>!!d&&(isAdmin||(!!uid&&d.owner===uid));
@@ -903,8 +905,8 @@ async function renderHist(){
   if(histState==='offline'){info.textContent='';list.appendChild(elx('div','empty','Team history works in the online app. This copy of the calculator does not save calculations.'));return;}
   if(histState==='loading'){info.textContent='';list.appendChild(elx('div','empty','Loading saved calculations…'));return;}
   if(histState==='error'){info.textContent='';list.appendChild(elx('div','empty','The history could not be loaded. Reload the page to try again.'));return;}
-  info.textContent=histDocs.length?(q?`${rows.length} of ${histDocs.length} calculations`:`${histDocs.length} saved calculation${histDocs.length===1?'':'s'}, newest first`)+(canWrite?'':' · view only'):'';
-  if(!histDocs.length){list.appendChild(elx('div','empty',canWrite?'No saved calculations yet. Enter a project name under Report details, then press Save to history.':'No saved calculations yet.'));return;}
+  info.textContent=histDocs.length?(q?`${rows.length} of ${histDocs.length} calculations`:`${histDocs.length} saved calculation${histDocs.length===1?'':'s'}, newest first`)+(canWrite?'':' · view only')+(histLocal?' · saved on this device':''):'';
+  if(!histDocs.length){list.appendChild(elx('div','empty',histLocal?'No calculations saved on this device yet. Enter a project name under Report details, then press Save to history. Saved calculations stay on this phone or computer.':(canWrite?'No saved calculations yet. Enter a project name under Report details, then press Save to history.':'No saved calculations yet.')));return;}
   if(!rows.length){list.appendChild(elx('div','empty',`No saved calculation matches "${$('histSearch').value.trim()}".`));return;}
   rows.forEach(d=>list.appendChild(histItem(d,names)));
 }
@@ -976,7 +978,7 @@ async function saveEntry(asUpdate){
     else{if(!uid){toast('Sign in to Claude to save calculations');return;}
       await db.doc('teamcalcs/'+uid).set({updatedAt:data.updatedAt});
       data.createdAt=data.updatedAt;data.createdBy=uid;const ref=await db.collection('teamcalcs/'+uid+'/items').add(data);
-      setLoaded({id:ref.id,owner:uid},data.project,data.updatedAt);toast('Saved to history');}
+      setLoaded({id:ref.id,owner:uid},data.project,data.updatedAt);toast(histLocal?'Saved on this device':'Saved to history');}
   }catch(e){toast(errText(e,'save to'));if(e&&e.code==='invalid_argument'){canWrite=false;applyWrite();}}
   finally{saving=false;btn.disabled=false;}
 }
@@ -989,10 +991,54 @@ function applyWrite(){$('saveBtn').hidden=!(db&&canWrite);$('updBtn').hidden=!(c
 $('saveBtn').addEventListener('click',()=>saveEntry(false));
 $('updBtn').addEventListener('click',()=>saveEntry(true));
 
+function localDb(){
+  const KEY='solar-battery-history-v1';
+  const read=()=>{try{const o=JSON.parse(localStorage.getItem(KEY)||'{}');return o&&typeof o==='object'?o:{};}catch(e){return {};}};
+  let store=read();
+  const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(store));return true;}catch(e){return false;}};
+  const subs=[];
+  const kids=c=>Object.keys(store).filter(k=>k.startsWith(c+'/')&&!k.slice(c.length+1).includes('/'));
+  const snap=c=>{const docs=kids(c).map(k=>({id:k.split('/').pop(),exists:true,data:()=>store[k],metadata:{fromCache:false,hasPendingWrites:false}}));return {docs,size:docs.length,empty:!docs.length,docChanges:()=>[]};};
+  const fire=()=>subs.forEach(x=>setTimeout(()=>x.f(snap(x.c)),0));
+  const err=(code)=>Object.assign(new Error(code),{code});
+  const doc=p=>({id:p.split('/').pop(),path:p,
+    get:async()=>({id:p.split('/').pop(),exists:p in store,data:()=>store[p]}),
+    set:async d=>{const old=store[p];store[p]=JSON.parse(JSON.stringify(d));if(!persist()){if(old===undefined)delete store[p];else store[p]=old;throw err('quota_exceeded');}fire();},
+    update:async d=>{if(!(p in store))throw err('invalid_argument');const old=store[p];store[p]=Object.assign({},old,JSON.parse(JSON.stringify(d)));if(!persist()){store[p]=old;throw err('quota_exceeded');}fire();},
+    delete:async()=>{delete store[p];persist();fire();}});
+  const col=c=>{const q={orderBy:()=>q,limit:()=>q,
+    onSnapshot(f){subs.push({c,f});setTimeout(()=>f(snap(c)),0);return()=>{};},
+    doc:id=>doc(c+'/'+(id||('l'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)))),
+    add:async d=>{const r=col(c).doc();await r.set(d);return r;}};return q;};
+  try{window.addEventListener('storage',e=>{if(e.key===KEY){store=read();fire();}});}catch(e){}
+  return {doc,collection:col,
+    exportAll:()=>JSON.parse(JSON.stringify(store)),
+    importAll:obj=>{let n=0;Object.keys(obj).forEach(k=>{if(/^teamcalcs\/local(\/items\/[A-Za-z0-9_-]+)?$/.test(k)&&obj[k]&&typeof obj[k]==='object'){if(k.includes('/items/')&&!(k in store))n++;store[k]=obj[k];}});
+      if(!persist())throw err('quota_exceeded');fire();return n;}};
+}
+$('bkBtn').addEventListener('click',()=>{
+  if(!db||!db.exportAll)return;
+  const data=db.exportAll();const n=Object.keys(data).filter(k=>k.includes('/items/')).length;
+  if(!n){toast('Nothing saved yet');return;}
+  const blob=new Blob([JSON.stringify({app:'solar-battery-calculator',version:1,exported:new Date().toISOString(),entries:data},null,1)],{type:'application/json'});
+  const d=new Date(),ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='Battery-Calculator-backup-'+ds+'.json';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);toast('Backup downloaded ('+n+' calculation'+(n===1?'':'s')+')');
+});
+$('rsBtn').addEventListener('click',()=>$('rsFile').click());
+$('rsFile').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f||!db||!db.importAll)return;
+  try{const o=JSON.parse(await f.text());if(!o||o.app!=='solar-battery-calculator'||!o.entries)throw new Error('bad');
+    const n=db.importAll(o.entries);toast(n?'Restored '+n+' calculation'+(n===1?'':'s'):'Those calculations are already here');}
+  catch(err){toast(err&&err.code==='quota_exceeded'?'Not enough space on this device to restore':'That file is not a calculator backup');}
+});
 (async function initHistory(){
-  if(!(window.claude&&typeof window.claude.use==='function')){histState='offline';renderHist();return;}
-  try{const r=await Promise.all([window.claude.use('db'),window.claude.use('user')]);db=r[0];usr=r[1];}catch(e){}
-  if(!db){histState='offline';renderHist();return;}
+  if(!(window.claude&&typeof window.claude.use==='function')){
+    db=localDb();histLocal=true;uid='local';isAdmin=true;canWrite=true;$('histBk').hidden=false;
+  }else{
+    try{const r=await Promise.all([window.claude.use('db'),window.claude.use('user')]);db=r[0];usr=r[1];}catch(e){}
+    if(!db){histState='offline';renderHist();return;}
+  }
   if(usr){try{uid=await usr.id();isAdmin=!!(await usr.canEdit());const c=await usr.can('data.write');if(c===false)canWrite=false;}catch(e){}}
   applyWrite();
   const perUser={},subs={};

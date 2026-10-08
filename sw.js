@@ -1,8 +1,8 @@
 // Offline support for Solar Battery Calculator.
 // Pages: network first, so updates on GitHub show up next time you open the app online.
 // Icons and other files: cache first.
-const CACHE = 'battery-calc-v1';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-64.png'];
+const CACHE = 'battery-calc-v3';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './favicon-64.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
