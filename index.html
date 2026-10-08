@@ -291,7 +291,8 @@ tr.short td{color:var(--muted)}
         <div class="row" style="grid-template-columns:minmax(0,1fr) 160px"><label for="phase">Supply</label>
           <select id="phase"><option value="3">3-phase, 400 V</option><option value="1">1-phase, 230 V</option></select></div>
         <div class="row"><label for="batC">Battery max discharge<small>continuous, from datasheet</small></label><input type="number" id="batC" min="0.05" max="5" step="0.05"><span class="u">C</span></div>
-        <div class="row"><label for="pcsMargin">Design margin</label><input type="number" id="pcsMargin" min="0" max="100" step="5"><span class="u">%</span></div>
+        <div class="row"><label for="dcac">PV oversize ratio<small>PV kWp ÷ inverter kVA</small></label><input type="number" id="dcac" min="0.5" max="2" step="0.05"><span class="u">×</span></div>
+        <div class="row" id="rowMg"><label for="pcsMargin">Design margin<small>on peak load</small></label><input type="number" id="pcsMargin" min="0" max="100" step="5"><span class="u">%</span></div>
       </div>
 
       <div class="grp">
@@ -433,9 +434,9 @@ tr.short td{color:var(--muted)}
 (function(){
 const HRS=['6–7','7–8','8–9','9–10','10–11','11–12','12–1','1–2','2–3','3–4','4–5','5–6'];
 const DEFAULTS={mode:'tou',peak:424,day:1350,off:485,monthly:2259,dayShare:60,days:30,minYield:3.25,avgMonthly:107,dod:90,eff:100,moduleW:585,batUnit:5,
-  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',cebOn:false,scen:'all',pvMargin:15,bessMargin:15,pcsBasis:'units',phase:'3',maxAmp:0,maxKva:0,loadPf:0.8,pcsMargin:20,batC:0.5,project:'',site:'',preparedBy:'',refNo:''};
+  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',cebOn:false,scen:'all',pvMargin:15,bessMargin:15,pcsBasis:'units',phase:'3',maxAmp:0,maxKva:0,loadPf:0.8,pcsMargin:20,dcac:1.2,batC:0.5,project:'',site:'',preparedBy:'',refNo:''};
 const TEXT_KEYS=['project','site','preparedBy','refNo'];
-const NUM_KEYS=['peak','day','off','monthly','dayShare','days','minYield','avgMonthly','dod','eff','moduleW','batUnit','kva','pf','loadPct','maxAmp','maxKva','loadPf','pcsMargin','pvMargin','bessMargin','batC'];
+const NUM_KEYS=['peak','day','off','monthly','dayShare','days','minYield','avgMonthly','dod','eff','moduleW','batUnit','kva','pf','loadPct','maxAmp','maxKva','loadPf','pcsMargin','pvMargin','bessMargin','batC','dcac'];
 const SC_L={all:'Day, Peak & Off-peak',daypeak:'Day & Peak',peak:'Peak only'};
 const SC_HINT={all:'Battery covers 18:00–06:00 and any daytime shortfall. Solar runs the daytime load and charges the battery.',daypeak:'Battery covers the peak (18:30–22:30), the day-tariff hours without sun and any daytime shortfall. Solar runs the daytime load and charges the battery. CEB supplies off-peak (22:30–05:30).',peak:'Battery covers the peak (18:30–22:30) only. All solar output charges the battery; solar does not supply the site directly. CEB supplies the day and off-peak periods.'};
 const SC_NOTE={all:'Solar produces from 06:00 to 18:00 and runs the day-tariff load in those hours. The battery carries 18:00–06:00: all peak and off-peak units plus the one hour of day-tariff load in that window, and any daytime hour where solar is below the load.',daypeak:'Solar produces from 06:00 to 18:00 and runs the day-tariff load in those hours. The battery carries the peak (18:30–22:30), the day-tariff half-hours 05:30–06:00 and 18:00–18:30, and any daytime hour where solar is below the load. CEB supplies the off-peak period (22:30–05:30).',peak:'The battery carries only the peak period (18:30–22:30). Solar charges the battery and does not supply the site directly, so all of its design-day output counts towards recharging. CEB supplies the day and off-peak periods.'};
@@ -759,75 +760,53 @@ function pcsData(s,m){
   if(!m)return null;
   const one=s.phase==='1',V=one?230:400,k3=one?1:Math.sqrt(3),phaseLbl=one?'1-phase, 230 V':'3-phase, 400 V',ph=one?'1-ph':'3-ph';
   const mg=s.pcsMargin/100,cMax=s.batC>0?s.batC:0.5,bessKwh=m.nBat*m.unit,sd=v=>fmt(v,v%1?1:0),phTxt=`${one?'':'√3 × '}${V} V`;
+  const ratio=s.dcac>0?s.dcac:1.2,rt=fmt(ratio,2).replace(/0$/,'');
   const pick=req=>PCS_STD.find(x=>x>=req-1e-9)||Math.ceil(req/100)*100;
-  let o;
-  if(s.scen==='peak'){
-    const pl=peakLoad(s);if(!pl)return null;
-    const {amp,kva,pf,kw}=pl,byU=s.pcsBasis==='units',reqKva=kva*(1+mg),std=pick(reqKva),outAmp=std*1000/(k3*V),c=bessKwh>0?kw/bessKwh:NaN;
-    const ok=c<=cMax+1e-9;
-    o={basis:'peak',std,reqKva,c,cLvl:ok?'ok':'no',
-      cTxt:ok?`OK, within the ${fmt(cMax,2)} C battery rating`:`Above the ${fmt(cMax,2)} C battery rating: add batteries or use a higher-rated battery`,
-      detail:`Required ${fmt(reqKva,1)} kVA incl. ${fmt(s.pcsMargin,0)} % margin · battery at ${fmt(c,2)} C`,
-      pdfDetail:`Needs ${fmt(reqKva,1)} kVA incl. ${fmt(s.pcsMargin,0)} % margin`,
-      pickL:byU?'Peak demand (units ÷ 4 h)':'Peak load',pickV:byU?`${fmt(kw,2)} kW · ${fmt(kva,1)} kVA (${ph})`:`${fmt(amp,0)} A · ${fmt(kva,1)} kVA (${ph})`,
-      inputs:[['PCS basis',byU?'Peak units ÷ 4 h (Peak only)':'Peak load (Peak only)'],['PCS supply',phaseLbl],byU?['Average peak demand',fmt(kw,2)+' kW']:[s.pcsBasis==='kva'?'Max demand':'Max load current (per phase)',s.pcsBasis==='kva'?fmt(s.maxKva,1)+' kVA':fmt(s.maxAmp,0)+' A'],['Load power factor',fmt(pf,2)],['PCS design margin',fmt(s.pcsMargin,0)+' %'],['Battery max discharge',fmt(cMax,2)+' C']],
-      copy:`PCS / inverter: ${sd(std)} kVA suggested, sized from ${byU?`peak units ÷ 4 h = ${fmt(kw,2)} kW / ${fmt(kva,1)} kVA`:`peak load ${fmt(amp,0)} A / ${fmt(kva,1)} kVA`} (${phaseLbl}), required ${fmt(reqKva,1)} kVA incl. ${s.pcsMargin}% margin; battery at ${fmt(c,2)} C`,
-      rows:[
-        byU?['Basis','Peak only: the battery discharges the peak units over the 4-hour peak period, so the PCS is sized from that average demand','Peak units ÷ 4 h']:['Basis','Peak only: the battery carries the whole site at peak time, so the PCS is sized from the measured peak load','Peak load'],
-        ...(byU?[
-        ['Peak-time energy per day',s.mode==='tou'?`Peak ${fmt(s.peak,0)} kWh ÷ ${fmt(Math.max(s.days,1),0)} d`:`Night units × 4/11 ÷ ${fmt(Math.max(s.days,1),0)} d`,fmt(pl.peakD,2)+' kWh'],
-        ['Average peak demand','Peak-time energy ÷ 4 h (18:30–22:30)',fmt(kw,2)+' kW'],
-        ['Peak load apparent power',`${fmt(kw,2)} kW ÷ ${fmt(pf,2)} PF`,fmt(kva,2)+' kVA'],
-        ['Equivalent current',`${fmt(kva,2)} kVA ÷ (${phTxt}), per phase`,fmt(amp,1)+' A'],
-        ]:[
-        ['Peak load current',s.pcsBasis==='kva'?`${fmt(kva,1)} kVA ÷ (${phTxt})`:'Entered value',fmt(amp,1)+' A'],
-        ['Peak load apparent power',s.pcsBasis==='kva'?'Entered value':`${phTxt} × ${fmt(amp,1)} A`,fmt(kva,2)+' kVA'],
-        ['Peak load active power',`${fmt(kva,2)} kVA × ${fmt(pf,2)} PF`,fmt(kw,2)+' kW'],
-        ]),
-        ['Required PCS rating',`Peak kVA × (1 + ${fmt(s.pcsMargin,0)} % margin)`,fmt(reqKva,2)+' kVA'],
-        ['Suggested PCS / inverter','Next common rating at or above the requirement',sd(std)+' kVA','',1],
-        ['PCS output current at rating',`${sd(std)} kVA ÷ (${phTxt}), per phase`,fmt(outAmp,1)+' A'],
-        ['Battery discharge at peak load',`${fmt(kw,2)} kW ÷ ${sd(bessKwh)} kWh recommended BESS`,fmt(c,2)+' C'],
-        ['PV to inverter ratio',`${fmt(m.Pp,2)} kWp recommended PV ÷ ${sd(std)} kVA · check the inverter's max PV input`,fmt(m.Pp/std,2)],
-      ]};
-  }else{
-    const pl=peakLoad(s),reqS=m.Pmin*(1+mg);
-    let reqKva=reqS,gov='solar',rowsL=[];
-    if(pl){
-      const reqL=pl.kva*(1+mg);if(reqL>reqS){reqKva=reqL;gov='load';}
-      rowsL=[
-        ['Peak load current',s.pcsBasis==='kva'?`${fmt(pl.kva,1)} kVA ÷ (${phTxt})`:'Entered value',fmt(pl.amp,1)+' A'],
-        ['Peak load apparent power',s.pcsBasis==='kva'?'Entered value':`${phTxt} × ${fmt(pl.amp,1)} A`,fmt(pl.kva,2)+' kVA'],
-        ['Peak load active power',`${fmt(pl.kva,2)} kVA × ${fmt(pl.pf,2)} PF`,fmt(pl.kw,2)+' kW'],
-        ['Required for peak load',`${fmt(pl.kva,2)} kVA × (1 + ${fmt(s.pcsMargin,0)} % margin)`,fmt(reqL,2)+' kVA'],
-      ];
-    }
-    const std=pick(reqKva),outAmp=std*1000/(k3*V);
-    const c=pl&&bessKwh>0?pl.kw/bessKwh:NaN,cFull=bessKwh>0?std/bessKwh:NaN,within=cFull<=cMax+1e-9,ok=c<=cMax+1e-9;
-    const govTxt=gov==='load'?'peak load governs':'solar governs';
-    o={basis:pl?'solar+load':'solar',std,reqKva,c,
-      cLvl:pl?(ok?'ok':'no'):'',
-      cTxt:pl?(ok?`OK, within the ${fmt(cMax,2)} C battery rating`:`Above the ${fmt(cMax,2)} C battery rating: add batteries or use a higher-rated battery`):'',
-      detail:pl?`Required ${fmt(reqKva,1)} kVA incl. ${fmt(s.pcsMargin,0)} % margin, ${govTxt} · battery at ${fmt(c,2)} C`:`Minimum solar ${fmt(m.Pmin,2)} kWp + ${fmt(s.pcsMargin,0)} % margin = ${fmt(reqKva,1)} kVA`,
-      pdfDetail:pl?`Needs ${fmt(reqKva,1)} kVA, ${govTxt}`:`Min. solar ${fmt(m.Pmin,2)} kWp + ${fmt(s.pcsMargin,0)} % margin`,
-      pickL:'Basis',pickV:pl?`Solar ${fmt(m.Pmin,1)} kWp · peak ${fmt(pl.amp,0)} A / ${fmt(pl.kva,1)} kVA`:`Minimum solar system (${ph})`,
-      inputs:[['PCS basis',pl?'Minimum solar and measured peak load':'Minimum solar system'],['PCS supply',phaseLbl],
-        ...(pl?[[s.pcsBasis==='kva'?'Max demand':'Max load current (per phase)',s.pcsBasis==='kva'?fmt(s.maxKva,1)+' kVA':fmt(s.maxAmp,0)+' A'],['Load power factor',fmt(pl.pf,2)]]:[]),
-        ['PCS design margin',fmt(s.pcsMargin,0)+' %'],['Battery max discharge',fmt(cMax,2)+' C']],
-      copy:`PCS / inverter: ${sd(std)} kVA suggested, from the minimum solar system ${fmt(m.Pmin,2)} kWp`+(pl?` and peak load ${fmt(pl.amp,0)} A / ${fmt(pl.kva,1)} kVA (${govTxt}); battery at ${fmt(c,2)} C`:'')+` + ${s.pcsMargin}% margin (${phaseLbl})`,
-      rows:[
-        ['Basis',pl?`${SC_L[s.scen]}: the larger of the minimum solar system and the measured peak load`:`${SC_L[s.scen]}: the PCS / inverter is sized from the minimum solar system`,pl?'Solar + peak load':'Minimum solar'],
-        ['Minimum solar system','From the battery and solar sizing above','C42 · '+fmt(m.Pmin,2)+' kWp'],
-        [pl?'Required for solar':'Required PCS rating',`${fmt(m.Pmin,2)} kWp × (1 + ${fmt(s.pcsMargin,0)} % margin), at unity power factor`,fmt(reqS,2)+' kVA'],
-        ...rowsL,
-        ...(pl?[['Required PCS rating','Larger of the solar and peak-load requirements',fmt(reqKva,2)+' kVA · '+(gov==='load'?'peak load':'solar')]]:[]),
-        ['Suggested PCS / inverter','Next common rating at or above the requirement',sd(std)+' kVA','',1],
-        ['PCS output current at rating',`${sd(std)} kVA ÷ (${phTxt}), per phase`,fmt(outAmp,1)+' A'],
-        ['PV to inverter ratio',`${fmt(m.Pp,2)} kWp recommended PV ÷ ${sd(std)} kVA · check the inverter's max PV input`,fmt(m.Pp/std,2)],
-        pl?['Battery discharge at peak load',`${fmt(pl.kw,2)} kW ÷ ${sd(bessKwh)} kWh recommended BESS`,fmt(c,2)+' C']
-          :['Battery discharge at full PCS output',`${sd(std)} kW ÷ ${sd(bessKwh)} kWh recommended BESS · `+(within?`within the ${fmt(cMax,2)} C battery rating`:`above the ${fmt(cMax,2)} C rating; the battery limits discharge to ${fmt(bessKwh*cMax,1)} kW`),fmt(cFull,2)+' C'],
-      ]};
-  }
+  const peak=s.scen==='peak',pl=peakLoad(s);
+  if(peak&&!pl)return null;
+  const byU=!!pl&&s.pcsBasis==='units';
+  const reqS=m.Pp/ratio,reqL=pl?pl.kva*(1+mg):0,reqKva=Math.max(reqS,reqL),gov=reqL>reqS?'load':'solar';
+  const std=pick(reqKva),outAmp=std*1000/(k3*V),dcacAct=m.Pp/std;
+  const c=pl&&bessKwh>0?pl.kw/bessKwh:NaN,cFull=bessKwh>0?std/bessKwh:NaN,within=cFull<=cMax+1e-9,ok=c<=cMax+1e-9;
+  const govTxt=gov==='load'?'peak load governs':'PV array governs';
+  const loadRows=!pl?[]:byU?[
+    ['Peak-time energy per day',s.mode==='tou'?`Peak ${fmt(s.peak,0)} kWh ÷ ${fmt(Math.max(s.days,1),0)} d`:`Night units × 4/11 ÷ ${fmt(Math.max(s.days,1),0)} d`,fmt(pl.peakD,2)+' kWh'],
+    ['Average peak demand','Peak-time energy ÷ 4 h (18:30–22:30)',fmt(pl.kw,2)+' kW'],
+    ['Peak load apparent power',`${fmt(pl.kw,2)} kW ÷ ${fmt(pl.pf,2)} PF`,fmt(pl.kva,2)+' kVA'],
+    ['Equivalent current',`${fmt(pl.kva,2)} kVA ÷ (${phTxt}), per phase`,fmt(pl.amp,1)+' A'],
+  ]:[
+    ['Peak load current',s.pcsBasis==='kva'?`${fmt(pl.kva,1)} kVA ÷ (${phTxt})`:'Entered value',fmt(pl.amp,1)+' A'],
+    ['Peak load apparent power',s.pcsBasis==='kva'?'Entered value':`${phTxt} × ${fmt(pl.amp,1)} A`,fmt(pl.kva,2)+' kVA'],
+    ['Peak load active power',`${fmt(pl.kva,2)} kVA × ${fmt(pl.pf,2)} PF`,fmt(pl.kw,2)+' kW'],
+  ];
+  if(pl)loadRows.push(['Required for peak load',`${fmt(pl.kva,2)} kVA × (1 + ${fmt(s.pcsMargin,0)} % margin)`,fmt(reqL,2)+' kVA']);
+  const loadName=byU?'peak units ÷ 4 h':'measured peak load';
+  const basisTxt=peak?`Peak only: the larger of the ${loadName} (+ margin) and the PV array ÷ ${rt}`
+    :pl?`${SC_L[s.scen]}: the larger of the PV array ÷ ${rt} and the measured peak load (+ margin)`
+    :`${SC_L[s.scen]}: PV array ÷ ${rt} oversize ratio (panels ${rt}× the inverter)`;
+  const o={basis:pl?'solar+load':'solar',std,reqKva,c,
+    cLvl:pl?(ok?'ok':'no'):'',
+    cTxt:pl?(ok?`OK, within the ${fmt(cMax,2)} C battery rating`:`Above the ${fmt(cMax,2)} C battery rating: add batteries or use a higher-rated battery`):'',
+    detail:pl?`Required ${fmt(reqKva,1)} kVA, ${govTxt} · battery at ${fmt(c,2)} C`:`Recommended PV ${fmt(m.Pp,2)} kWp ÷ ${rt} = ${fmt(reqS,1)} kVA · DC/AC ${fmt(dcacAct,2)}`,
+    pdfDetail:pl?`Needs ${fmt(reqKva,1)} kVA, ${govTxt}`:`PV ${fmt(m.Pp,2)} kWp ÷ ${rt} oversize ratio`,
+    pickL:pl?(byU?'Peak demand (units ÷ 4 h)':'Peak load'):'Basis',
+    pickV:pl?(byU?`${fmt(pl.kw,2)} kW · ${fmt(pl.kva,1)} kVA (${ph})`:`${fmt(pl.amp,0)} A · ${fmt(pl.kva,1)} kVA (${ph})`):`PV array ÷ ${rt} (${ph})`,
+    inputs:[['PCS basis',pl?(peak?(byU?'Peak units ÷ 4 h and PV array':'Measured peak load and PV array'):'PV array and measured peak load'):'PV array ÷ oversize ratio'],['PCS supply',phaseLbl],['PV oversize ratio (DC/AC)',rt],
+      ...(pl?[byU?['Average peak demand',fmt(pl.kw,2)+' kW']:[s.pcsBasis==='kva'?'Max demand':'Max load current (per phase)',s.pcsBasis==='kva'?fmt(s.maxKva,1)+' kVA':fmt(s.maxAmp,0)+' A'],['Load power factor',fmt(pl.pf,2)],['PCS margin on peak load',fmt(s.pcsMargin,0)+' %']]:[]),
+      ['Battery max discharge',fmt(cMax,2)+' C']],
+    copy:`PCS / inverter: ${sd(std)} kVA suggested (${phaseLbl}); PV ${fmt(m.Pp,2)} kWp ÷ ${rt} = ${fmt(reqS,1)} kVA`+(pl?`; ${loadName} ${byU?fmt(pl.kw,2)+' kW':fmt(pl.amp,0)+' A'} / ${fmt(pl.kva,1)} kVA + ${s.pcsMargin}% = ${fmt(reqL,1)} kVA (${govTxt}); battery at ${fmt(c,2)} C`:'')+`; DC/AC ${fmt(dcacAct,2)}`,
+    rows:[
+      ['Basis',basisTxt,pl?(byU?'Peak units + PV':'Peak load + PV'):`PV ÷ ${rt}`],
+      ['Recommended PV array','Installed array from the solar sizing above',fmt(m.Pp,2)+' kWp'],
+      [pl?'Required for PV array':'Required PCS rating',`${fmt(m.Pp,2)} kWp ÷ ${rt} oversize ratio (DC/AC)`,fmt(reqS,2)+' kVA'],
+      ...loadRows,
+      ...(pl?[['Required PCS rating','Larger of the PV and peak-load requirements',fmt(reqKva,2)+' kVA · '+(gov==='load'?'peak load':'PV')]]:[]),
+      ['Suggested PCS / inverter','Next common rating at or above the requirement',sd(std)+' kVA','',1],
+      ['PCS output current at rating',`${sd(std)} kVA ÷ (${phTxt}), per phase`,fmt(outAmp,1)+' A'],
+      ['Actual DC/AC ratio',`${fmt(m.Pp,2)} kWp ÷ ${sd(std)} kVA · target ${rt} or less; check the inverter's max PV input`,fmt(dcacAct,2)],
+      pl?['Battery discharge at peak load',`${fmt(pl.kw,2)} kW ÷ ${sd(bessKwh)} kWh recommended BESS`,fmt(c,2)+' C']
+        :['Battery discharge at full PCS output',`${sd(std)} kW ÷ ${sd(bessKwh)} kWh recommended BESS · `+(within?`within the ${fmt(cMax,2)} C battery rating`:`above the ${fmt(cMax,2)} C rating; the battery limits discharge to ${fmt(bessKwh*cMax,1)} kW`),fmt(cFull,2)+' C'],
+    ]};
   if(one&&o.std>10)o.rows.push(['Note','Single-phase units above 10 kVA are uncommon; consider a 3-phase PCS','Check']);
   o.one=one;o.phaseLbl=phaseLbl;
   return o;
@@ -837,9 +816,11 @@ function renderPcs(){
   const bu=state.pcsBasis;
   $('basisUnits').textContent=peak?'Peak units ÷ 4 h':'Solar only';
   $('rowPf').hidden=bu==='units'&&!peak;
-  $('pcsHint').textContent=peak?(bu==='units'?'Peak only: sized from the peak units discharged over the 4-hour peak (18:30–22:30). Use Max current or Max kVA if you have a measured peak.':'Peak only: sized from the measured peak load, because the battery carries the whole site at peak time.')
-    :(bu==='units'?`${SC_L[state.scen]||''}: sized from the minimum solar system. Choose Max current or Max kVA to add a measured peak load if needed.`:`${SC_L[state.scen]||''}: sized from the larger of the minimum solar system and the measured peak load. Leave it at 0 to use solar only.`);
-  $('pcsLead').textContent=peak?'Rating needed for the PCS or hybrid inverter to carry the site\'s peak load from the battery, with checks on battery discharge rate and PV input.':(bu==='units'?'Rating needed for the PCS or hybrid inverter, sized from the minimum solar system, with checks on PV input and battery discharge.':'Rating needed for the PCS or hybrid inverter: the larger of the minimum solar system and the measured peak load, with checks on PV input and battery discharge.');
+  $('rowMg').hidden=bu==='units'&&!peak;
+  const rt=fmt(state.dcac>0?state.dcac:1.2,2).replace(/0$/,'');
+  $('pcsHint').textContent=peak?(bu==='units'?`Peak only: sized from the peak units discharged over the 4-hour peak (18:30–22:30), and at least the PV array ÷ ${rt}. Use Max current or Max kVA if you have a measured peak.`:`Peak only: sized from the measured peak load, because the battery carries the whole site at peak time, and at least the PV array ÷ ${rt}.`)
+    :(bu==='units'?`${SC_L[state.scen]||''}: sized from the recommended PV array ÷ ${rt} (panels ${rt}× the inverter). Choose Max current or Max kVA to add a measured peak load if needed.`:`${SC_L[state.scen]||''}: sized from the larger of the PV array ÷ ${rt} and the measured peak load. Leave it at 0 to use the PV array only.`);
+  $('pcsLead').textContent=peak?'Rating needed for the PCS or hybrid inverter to carry the site\'s peak load from the battery, with checks on battery discharge rate and PV input.':(bu==='units'?'Rating needed for the PCS or hybrid inverter, sized from the recommended PV array and the PV oversize ratio, with checks on DC/AC ratio and battery discharge.':'Rating needed for the PCS or hybrid inverter: the larger of the PV array ÷ oversize ratio and the measured peak load, with checks on DC/AC ratio and battery discharge.');
   const d=model?pcsData(state,model):null;
   $('pcsCard').hidden=!d;$('pcsPlate').classList.toggle('off',!d);
   if(!d){$('rPcs').textContent='–';$('rPcsD').textContent=model&&peak?'Peak only: enter the max load current or max kVA to size the PCS / inverter':'–';$('rPcsPickL').textContent='Basis';$('rPcsPick').textContent=peak?'Peak load':'–';$('pcsTbl').innerHTML='';return;}
@@ -1092,6 +1073,7 @@ async function buildReport(){
    'The array qualifies once its design-day output available for charging can put the full battery energy back each day.',
    `Recommended selections add the design margins (PV ${fmt(s.pvMargin,0)} %, BESS ${fmt(s.bessMargin,0)} %) to the minimum sizes, then round up to whole modules and battery units.`,
    'The hourly solar profile is a clear-day 1 kWp curve for Sri Lanka, scaled so the day totals the design-day yield.',
+   `PCS / inverter: the recommended PV array ÷ the ${fmt(s.dcac>0?s.dcac:1.2,2)} PV oversize ratio, or the peak load plus margin where used, whichever is larger.`,
    'Battery figures are at the stated DOD and efficiency. In Peak only, the PCS is sized from the peak load and the recommended BESS is also large enough to deliver that peak power within the battery\'s max discharge rate.'
   ].forEach(t=>{const ls=pdf.wrap(t,CW-6,8.4);ensure(ls.length*4+2);pdf.text('•',M+1,y+3.6,{size:8.4,color:K.muted});ls.forEach((l,i)=>pdf.text(l,M+5,y+3.6+i*4,{size:8.4,color:K.muted}));y+=ls.length*4+2;});
 
