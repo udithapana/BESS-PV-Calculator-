@@ -276,19 +276,20 @@ tr.short td{color:var(--muted)}
       </div>
 
       <div class="grp">
-        <p class="gh">PCS / inverter sizing</p>
+        <label class="chk" for="pcsOn"><input type="checkbox" id="pcsOn"><span><span class="gh">PCS / inverter sizing</span><small>Tick to size the PCS / inverter from the max current or kVA. Unticked, the BESS is sized on energy only and PCS is left out of the results and report.</small></span></label>
+        <div class="grp" id="pcsFields" style="padding-top:2px" hidden>
         <div class="seg" role="group" aria-label="Peak load entered as">
           <button type="button" id="basisAmp" aria-pressed="true">Max current</button>
           <button type="button" id="basisKva" aria-pressed="false">Max kVA</button>
         </div>
         <div class="row" style="grid-template-columns:minmax(0,1fr) 160px"><label for="phase">Supply</label>
           <select id="phase"><option value="3">3-phase, 400 V</option><option value="1">1-phase, 230 V</option></select></div>
-        <div class="row" id="rowAmp"><label for="maxAmp">Max load current<small>per phase</small></label><input type="number" id="maxAmp" min="0" step="1"><span class="u">A</span></div>
-        <div class="row" id="rowKva" hidden><label for="maxKva">Max demand</label><input type="number" id="maxKva" min="0" step="0.1"><span class="u">kVA</span></div>
+        <div class="row" id="rowAmp"><label for="maxAmp">Max load current<small>per phase</small></label><input type="number" id="maxAmp" min="0" step="1" placeholder="0"><span class="u">A</span></div>
+        <div class="row" id="rowKva" hidden><label for="maxKva">Max demand</label><input type="number" id="maxKva" min="0" step="0.1" placeholder="0"><span class="u">kVA</span></div>
         <div class="row"><label for="loadPf">Load power factor</label><input type="number" id="loadPf" min="0.1" max="1" step="0.01"><span class="u"></span></div>
         <div class="row"><label for="batC">Battery max discharge<small>continuous, from datasheet</small></label><input type="number" id="batC" min="0.05" max="5" step="0.05"><span class="u">C</span></div>
         <div class="row"><label for="pcsMargin">Design margin</label><input type="number" id="pcsMargin" min="0" max="100" step="5"><span class="u">%</span></div>
-        <p class="hint">Enter 0 to leave PCS sizing out of the results and report.</p>
+        </div>
       </div>
 
       <div class="grp">
@@ -430,7 +431,7 @@ tr.short td{color:var(--muted)}
 (function(){
 const HRS=['6–7','7–8','8–9','9–10','10–11','11–12','12–1','1–2','2–3','3–4','4–5','5–6'];
 const DEFAULTS={mode:'tou',peak:424,day:1350,off:485,monthly:2259,dayShare:60,days:30,minYield:3.25,avgMonthly:107,dod:90,eff:100,moduleW:585,batUnit:5,
-  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',cebOn:false,scen:'all',pvMargin:15,bessMargin:15,pcsBasis:'amp',phase:'3',maxAmp:40,maxKva:0,loadPf:0.8,pcsMargin:20,batC:0.5,project:'',site:'',preparedBy:'',refNo:''};
+  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',cebOn:false,scen:'all',pvMargin:15,bessMargin:15,pcsOn:false,pcsBasis:'amp',phase:'3',maxAmp:0,maxKva:0,loadPf:0.8,pcsMargin:20,batC:0.5,project:'',site:'',preparedBy:'',refNo:''};
 const TEXT_KEYS=['project','site','preparedBy','refNo'];
 const NUM_KEYS=['peak','day','off','monthly','dayShare','days','minYield','avgMonthly','dod','eff','moduleW','batUnit','kva','pf','loadPct','maxAmp','maxKva','loadPf','pcsMargin','pvMargin','bessMargin','batC'];
 const SC_L={all:'Day, Peak & Off-peak',daypeak:'Day & Peak',peak:'Peak only'};
@@ -460,6 +461,7 @@ function fill(){
   $('cebTime').value=state.cebTime;
   $('phase').value=state.phase==='1'?'1':'3';
   $('cebOn').checked=!!state.cebOn;$('cebFields').hidden=!state.cebOn;
+  $('pcsOn').checked=!!state.pcsOn;$('pcsFields').hidden=!state.pcsOn;
   setBasis(state.pcsBasis,true);
   setScen(state.scen,true);
   setMode(state.mode,true);
@@ -489,6 +491,7 @@ function readInputs(){
   state.cebTime=$('cebTime').value;
   state.phase=$('phase').value;
   state.cebOn=$('cebOn').checked;$('cebFields').hidden=!state.cebOn;
+  state.pcsOn=$('pcsOn').checked;$('pcsFields').hidden=!state.pcsOn;
   TEXT_KEYS.forEach(k=>{state[k]=$(k).value.trim();});
 }
 
@@ -739,6 +742,7 @@ function renderSweep(){
   $('sweepTbl').innerHTML=h+'</tbody>';
 }
 function peakLoad(s){
+  if(!s.pcsOn)return null;
   const one=s.phase==='1',V=one?230:400,k3=one?1:Math.sqrt(3);
   let kva,amp;
   if(s.pcsBasis==='kva'){kva=s.maxKva;amp=kva*1000/(k3*V);}else{amp=s.maxAmp;kva=k3*V*amp/1000;}
@@ -775,7 +779,7 @@ function pcsData(s,m){
 }
 function renderPcs(){
   const d=model?pcsData(state,model):null;
-  $('pcsCard').hidden=!d;$('pcsPlate').classList.toggle('off',!d);
+  $('pcsCard').hidden=!d;$('pcsPlate').hidden=!state.pcsOn;$('pcsPlate').classList.toggle('off',!d);
   if(!d){$('rPcs').textContent='–';$('rPcsD').textContent=model?'Enter the max load current or max kVA to size the PCS / inverter':'–';$('rPcsPick').textContent='–';$('pcsTbl').innerHTML='';return;}
   $('rPcs').textContent=fmt(d.std,d.std%1?1:0);
   $('rPcsD').textContent=`Required ${fmt(d.reqKva,1)} kVA incl. ${fmt(state.pcsMargin,0)} % margin · battery at ${fmt(d.c,2)} C`;
@@ -1136,6 +1140,7 @@ function loadEntry(d){
   Object.assign(st,d.inputs||{});
   if(!Array.isArray(st.profile)||st.profile.length!==12)st.profile=DEFAULTS.profile.slice();
   if(st.cebOn===undefined||(d.inputs&&d.inputs.cebOn===undefined))st.cebOn=!!d.cebOpen;
+  if(d.inputs&&d.inputs.pcsOn===undefined)st.pcsOn=(+d.inputs.maxAmp>0&&d.inputs.pcsBasis!=='kva')||(+d.inputs.maxKva>0&&d.inputs.pcsBasis==='kva');
   state=st;
   fill();update(true);
   if(model&&typeof d.selected==='number'&&d.selected>0){selected=Math.min(d.selected,+$('selSize').max);$('selSize').value=selected;renderSel();}
