@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#15202B">
+<meta name="description" content="Sizes the BESS and the minimum PV array from TOU or flat electricity bills, with a PDF report.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Battery Calc">
+<title>Solar Battery Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: engineering calc sheet. Inputs column on the left (sticky on desktop), results on the right: two rating plates, then charts, then traceable calculation. */
+:root{
+  --bg:#EEF1F4; --panel:#FFFFFF; --ink:#15202B; --muted:#5A6672; --line:#D5DCE3; --grid:#E4E9EE; --night:#E6EBF1;
+  --sun:#CF8306; --sun-soft:#F5DDAA; --batt:#0E7562; --batt-soft:#BFE3D9; --warn:#B93D0B; --warn-soft:#FBE3D6; --ok:#0E7562; --ok-soft:#D4EEE7;
+  --field:#F7F9FA;
+  --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E141A; --panel:#161F28; --ink:#E4EAF0; --muted:#94A1AD; --line:#2B3743; --grid:#22303C; --night:#131C25;
+  --sun:#F0A63A; --sun-soft:#4D3814; --batt:#3FC4A5; --batt-soft:#14423A; --warn:#F2814F; --warn-soft:#46241A; --ok:#3FC4A5; --ok-soft:#173A33;
+  --field:#1C2731; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#0E141A; --panel:#161F28; --ink:#E4EAF0; --muted:#94A1AD; --line:#2B3743; --grid:#22303C; --night:#131C25;
+  --sun:#F0A63A; --sun-soft:#4D3814; --batt:#3FC4A5; --batt-soft:#14423A; --warn:#F2814F; --warn-soft:#46241A; --ok:#3FC4A5; --ok-soft:#173A33;
+  --field:#1C2731; color-scheme:dark; }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;margin:0}
+.wrap{max-width:1280px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:20px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(26px,4vw,34px);letter-spacing:.01em;margin:0;line-height:1.05;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;font-size:14px;max-width:62ch}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-size:14px;font-weight:500;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 12px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+.app{display:grid;grid-template-columns:minmax(300px,390px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:920px){.app{grid-template-columns:minmax(0,1fr)}}
+
+/* Inputs */
+.inputs{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 16px 16px}
+@media (min-width:921px){.inputs{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto}}
+.grp{padding-top:14px;display:grid;gap:8px}
+.grp + .grp{border-top:1px solid var(--line);margin-top:14px}
+.gh{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 96px 56px;gap:8px;align-items:center}
+.row label{font-size:14px;min-width:0}
+.row label small{display:block;color:var(--muted);font-size:12px;font-family:var(--f-mono)}
+.row .u{font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+input[type=number],select{width:100%;font:inherit;font-family:var(--f-mono);font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:5px;padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums}
+select{text-align:left}
+input[type=text],input[type=search]{width:100%;font:inherit;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:5px;padding:6px 8px}
+.row.txt{grid-template-columns:minmax(0,1fr) minmax(0,190px)}
+button:disabled{opacity:.6;cursor:progress}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-8px 0 20px}
+.tabs button{border:0;border-bottom:2.5px solid transparent;border-radius:0;background:none;padding:10px 14px;font-family:var(--f-display);font-weight:600;font-size:16px;letter-spacing:.03em;color:var(--muted)}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--sun)}
+.tabs .cnt{font-family:var(--f-mono);font-size:12px;font-weight:500;background:var(--field);border:1px solid var(--line);border-radius:999px;padding:0 7px;margin-left:6px}
+.tabs .cnt:empty{display:none}
+.banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;background:var(--panel);border:1px dashed var(--muted);border-radius:8px;padding:10px 14px;font-size:14px}
+.banner b{font-weight:600}
+.banner .bb{display:flex;gap:8px;flex-wrap:wrap}
+.hist-tools{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.hist-tools input{max-width:380px}
+.hist-tools p{margin:0;color:var(--muted);font-size:13.5px}
+.hlist{display:grid;gap:10px}
+.hitem{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.8fr) auto;gap:10px 20px;align-items:center}
+@media (max-width:860px){.hitem{grid-template-columns:minmax(0,1fr)}}
+.hitem .t{font-family:var(--f-display);font-weight:600;font-size:19px;line-height:1.2;overflow-wrap:anywhere}
+.hitem .m{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.hitem .fig{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;color:var(--muted)}
+.hitem .fig b{font-family:var(--f-mono);font-weight:500;color:var(--ink);font-size:14px;font-variant-numeric:tabular-nums}
+.hitem .acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hitem .acts span{font-size:13px;color:var(--warn);font-weight:500}
+.hitem.cur{border-color:var(--ink)}
+button.danger{color:var(--warn)}
+button.danger.solid{background:var(--warn);color:var(--panel);border-color:var(--warn)}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:28px 20px;text-align:center;color:var(--muted)}
+input[aria-invalid=true]{border-color:var(--warn);background:var(--warn-soft)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:var(--field);color:var(--muted);padding:8px}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+details.more{border-top:1px solid var(--line);margin-top:14px;padding-top:10px}
+details.more summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);list-style-position:outside}
+details.more[open] summary{margin-bottom:10px}
+.prof{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.prof label{display:grid;gap:2px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.prof .sum{grid-column:1/-1;font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right}
+
+/* Results */
+.results{display:grid;gap:20px;min-width:0}
+.plates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:560px){.plates{grid-template-columns:minmax(0,1fr)}.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.plate{background:var(--panel);border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
+.plate .ph{display:flex;justify-content:space-between;gap:8px;padding:7px 14px;font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+.plate.batt .ph{background:var(--batt-soft)}
+.plate.sun .ph{background:var(--sun-soft)}
+.plate .ph span:last-child{font-family:var(--f-mono);font-weight:400;letter-spacing:0;text-transform:none;opacity:.75}
+.plate .pv{padding:10px 14px 4px;display:flex;align-items:baseline;gap:8px}
+.plate .num{font-family:var(--f-display);font-weight:700;font-size:clamp(44px,6vw,60px);line-height:1;font-variant-numeric:tabular-nums}
+.plate .unit{font-family:var(--f-display);font-weight:600;font-size:22px;color:var(--muted)}
+.plate .pd{padding:0 14px 12px;font-size:13.5px;color:var(--muted)}
+.plate .pick{margin-top:auto;border-top:1px dashed var(--line);padding:10px 14px;font-size:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.plate .pick b{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.fact{background:var(--panel);padding:10px 12px}
+.fact .k{font-size:12px;color:var(--muted)}
+.fact .v{font-family:var(--f-mono);font-size:16px;font-weight:500;font-variant-numeric:tabular-nums}
+.fact .v small{font-size:12px;color:var(--muted);font-weight:400}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.card h2{font-family:var(--f-display);font-weight:600;font-size:20px;margin:0;line-height:1.2}
+.card .lead{color:var(--muted);font-size:13.5px;margin:4px 0 10px;max-width:70ch}
+.chart{width:100%;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.legend i.line{height:3px;vertical-align:3px}
+
+svg text{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+svg .ax{stroke:var(--line);stroke-width:1}
+svg .gl{stroke:var(--grid);stroke-width:1}
+svg .need{fill:none;stroke:var(--batt);stroke-width:2.5}
+svg .surplus{fill:none;stroke:var(--sun);stroke-width:2.5}
+svg .bad{fill:var(--warn-soft)}
+svg .badt{fill:var(--warn);font-family:var(--f-display);font-size:13px;font-weight:600}
+svg .vmin{stroke:var(--ink);stroke-width:1.2;stroke-dasharray:4 3}
+svg .lbl{fill:var(--ink);font-weight:500}
+svg .sel{stroke:var(--muted);stroke-width:1}
+svg .dot{fill:var(--panel);stroke:var(--ink);stroke-width:2}
+svg .dotsel{fill:var(--ink)}
+svg .nightbg{fill:var(--night)}
+svg .used{fill:var(--sun-soft)}
+svg .over{fill:var(--sun)}
+svg .bsup{fill:var(--batt-soft)}
+svg .load{fill:none;stroke:var(--ink);stroke-width:2}
+
+.slider{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.slider label{font-size:13.5px;font-weight:500}
+.slider output{font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums;min-width:80px;text-align:right}
+input[type=range]{width:100%;accent-color:var(--ink)}
+@media (max-width:520px){.slider{grid-template-columns:minmax(0,1fr) auto}.slider input{grid-column:1/-1;grid-row:2}}
+.selread{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px;font-size:13.5px;align-items:center}
+.selread b{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;letter-spacing:.02em}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.no{background:var(--warn-soft);color:var(--warn)}
+
+.tbl{width:100%;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-family:var(--f-display);font-weight:600;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td .f{display:block;font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+td .ref{font-family:var(--f-mono);font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-left:6px;white-space:nowrap}
+tr.key td{font-weight:600}
+tr.first td{background:var(--ok-soft)}
+tr.short td{color:var(--muted)}
+.err{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:12px 14px;font-weight:500}
+.notes{font-size:13px;color:var(--muted);max-width:80ch}
+.notes li{margin-bottom:4px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:14px}
+@media (prefers-reduced-motion:no-preference){.plate .num{transition:color .2s}}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Solar Battery Calculator</h1>
+      <p class="sub">Sizes the BESS and the minimum PV array needed to carry the site's night load and daytime shortfall on a low-yield design day.</p>
+    </div>
+    <div class="btns">
+      <button id="saveBtn" type="button" hidden>Save to history</button>
+      <button id="pdfBtn" class="primary" type="button">Download PDF report</button>
+      <button id="copyBtn" type="button">Copy results</button>
+      <button id="resetBtn" type="button">Reset to example</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button type="button" role="tab" id="tabCalc" aria-selected="true" aria-controls="calcView">Calculator</button>
+    <button type="button" role="tab" id="tabHist" aria-selected="false" aria-controls="histView">History<span class="cnt" id="histCount"></span></button>
+  </nav>
+
+  <section id="histView" role="tabpanel" aria-labelledby="tabHist" hidden>
+    <div class="hist-tools">
+      <input type="search" id="histSearch" placeholder="Search project, site, reference or engineer" aria-label="Search saved calculations">
+      <p id="histInfo"></p>
+    </div>
+    <div class="hlist" id="hlist"></div>
+  </section>
+
+  <div class="app" id="calcView" role="tabpanel" aria-labelledby="tabCalc">
+    <!-- INPUTS -->
+    <form class="inputs" id="form" autocomplete="off" novalidate>
+      <div class="grp">
+        <p class="gh">Electricity bill</p>
+        <div class="seg" role="group" aria-label="Tariff type">
+          <button type="button" id="modeTou" aria-pressed="true">TOU tariff</button>
+          <button type="button" id="modeFlat" aria-pressed="false">Non-TOU</button>
+        </div>
+        <div id="touRows" class="grp" style="padding-top:4px">
+          <div class="row"><label for="peak">Peak units<small>18:30–22:30 · 4 h</small></label><input type="number" id="peak" min="0" step="1"><span class="u">kWh/mo</span></div>
+          <div class="row"><label for="day">Day units<small>05:30–18:30 · 13 h</small></label><input type="number" id="day" min="0" step="1"><span class="u">kWh/mo</span></div>
+          <div class="row"><label for="off">Off-peak units<small>22:30–05:30 · 7 h</small></label><input type="number" id="off" min="0" step="1"><span class="u">kWh/mo</span></div>
+        </div>
+        <div id="flatRows" class="grp" style="padding-top:4px" hidden>
+          <div class="row"><label for="monthly">Monthly units</label><input type="number" id="monthly" min="0" step="1"><span class="u">kWh/mo</span></div>
+          <div class="row"><label for="dayShare">Used in daytime<small>05:30–18:30</small></label><input type="number" id="dayShare" min="0" max="100" step="1"><span class="u">%</span></div>
+        </div>
+        <div class="row"><label for="days">Billing days</label><input type="number" id="days" min="1" step="1"><span class="u">days</span></div>
+      </div>
+
+      <div class="grp">
+        <p class="gh">Solar yield</p>
+        <div class="row"><label for="minYield">Design-day yield<small>minimum, per kWp</small></label><input type="number" id="minYield" min="0" step="0.05"><span class="u">kWh/kWp</span></div>
+        <div class="row"><label for="avgMonthly">Average monthly yield<small>per kWp</small></label><input type="number" id="avgMonthly" min="0" step="1"><span class="u">kWh/kWp</span></div>
+      </div>
+
+      <div class="grp">
+        <p class="gh">Battery</p>
+        <div class="row"><label for="dod">Depth of discharge</label><input type="number" id="dod" min="1" max="100" step="1"><span class="u">%</span></div>
+        <div class="row"><label for="eff">Round-trip efficiency<small>100 % = as in the Excel</small></label><input type="number" id="eff" min="1" max="100" step="1"><span class="u">%</span></div>
+      </div>
+
+      <div class="grp">
+        <p class="gh">Equipment</p>
+        <div class="row"><label for="moduleW">PV module rating</label><input type="number" id="moduleW" min="1" step="5"><span class="u">Wp</span></div>
+        <div class="row"><label for="batUnit">Battery unit size</label><input type="number" id="batUnit" min="0.1" step="0.1"><span class="u">kWh</span></div>
+      </div>
+
+      <div class="grp">
+        <p class="gh">Report details</p>
+        <div class="row txt"><label for="project">Project / client</label><input type="text" id="project" maxlength="80" placeholder="e.g. AFC Jaffna branch"></div>
+        <div class="row txt"><label for="site">Site location</label><input type="text" id="site" maxlength="80" placeholder="e.g. Jaffna"></div>
+        <div class="row txt"><label for="preparedBy">Prepared by</label><input type="text" id="preparedBy" maxlength="60"></div>
+        <div class="row txt"><label for="refNo">Reference no.</label><input type="text" id="refNo" maxlength="40"></div>
+      </div>
+
+      <details class="more" id="profBox">
+        <summary>Hourly solar profile (1 kWp, clear day)</summary>
+        <p class="hint" style="margin-bottom:8px">Output in kW for each hour, 06:00–18:00. The calculator scales this shape so a day totals the design-day yield above.</p>
+        <div class="prof" id="prof"></div>
+      </details>
+
+      <details class="more" id="cebBox">
+        <summary>CEB connection check (optional)</summary>
+        <div class="grp" style="padding-top:0">
+          <div class="row"><label for="kva">Transformer / connection</label><input type="number" id="kva" min="0" step="1"><span class="u">kVA</span></div>
+          <div class="row"><label for="pf">Power factor</label><input type="number" id="pf" min="0" max="1" step="0.01"><span class="u"></span></div>
+          <div class="row"><label for="loadPct">Average loading</label><input type="number" id="loadPct" min="0" max="100" step="1"><span class="u">%</span></div>
+          <div class="row" style="grid-template-columns:minmax(0,1fr) 160px"><label for="cebTime">Grid used during</label>
+            <select id="cebTime">
+              <option value="peak">Peak (4 h)</option>
+              <option value="day">Day (13 h)</option>
+              <option value="off">Off-peak (7 h)</option>
+              <option value="daypeak">Day &amp; Peak (17 h)</option>
+              <option value="dayoff">Day &amp; Off-peak (20 h)</option>
+              <option value="peakoff">Peak &amp; Off-peak (11 h)</option>
+            </select></div>
+        </div>
+      </details>
+    </form>
+
+    <!-- RESULTS -->
+    <main class="results" id="results">
+      <div id="errBox" class="err" hidden></div>
+      <div class="banner" id="banner" hidden>
+        <span id="bannerText"></span>
+        <span class="bb"><button type="button" id="updBtn">Update saved entry</button><button type="button" id="closeBanner">Close</button></span>
+      </div>
+
+      <section class="plates" aria-label="Main results">
+        <div class="plate batt">
+          <div class="ph"><span>Required BESS capacity</span><span>C41</span></div>
+          <div class="pv"><span class="num" id="rBess">–</span><span class="unit">kWh</span></div>
+          <div class="pd" id="rBessD">–</div>
+          <div class="pick"><span>Selection</span><b id="rBessPick">–</b></div>
+        </div>
+        <div class="plate sun">
+          <div class="ph"><span>Minimum solar system</span><span>C42</span></div>
+          <div class="pv"><span class="num" id="rPv">–</span><span class="unit">kWp</span></div>
+          <div class="pd" id="rPvD">–</div>
+          <div class="pick"><span>Selection</span><b id="rPvPick">–</b></div>
+        </div>
+      </section>
+
+      <section class="facts" id="facts" aria-label="Key figures"></section>
+
+      <section class="card">
+        <h2>Battery requirement vs solar capacity</h2>
+        <p class="lead">The battery must be refilled each day from surplus solar. Below the crossing point the array cannot recharge it. Above it, a larger array also trims the daytime shortfall, so the battery needed falls slightly.</p>
+        <div class="chart" id="chart1"></div>
+        <div class="legend">
+          <span><i class="line" style="background:var(--batt)"></i>Energy needed to recharge battery (kWh/day)</span>
+          <span><i class="line" style="background:var(--sun)"></i>Surplus solar available for charging (kWh/day)</span>
+          <span><i style="background:var(--warn-soft)"></i>Array too small</span>
+        </div>
+        <div class="slider">
+          <label for="selSize">Try a solar size</label>
+          <input type="range" id="selSize" min="0" max="100" step="0.1" value="25">
+          <output id="selOut" for="selSize">–</output>
+        </div>
+        <div class="selread" id="selRead"></div>
+      </section>
+
+      <section class="card">
+        <h2>Design-day energy flow</h2>
+        <p class="lead" id="flowLead">Hour by hour at the selected solar size.</p>
+        <div class="chart" id="chart2"></div>
+        <div class="legend">
+          <span><i style="background:var(--sun-soft)"></i>Solar used directly</span>
+          <span><i style="background:var(--sun)"></i>Surplus solar, charges battery</span>
+          <span><i style="background:var(--batt-soft)"></i>Supplied by battery</span>
+          <span><i class="line" style="background:var(--ink)"></i>Site load</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Calculation</h2>
+        <p class="lead">Step by step at the minimum solar size, with the matching cells in your Excel model.</p>
+        <div class="tbl"><table id="calcTbl"></table></div>
+      </section>
+
+      <section class="card">
+        <details>
+          <summary style="cursor:pointer"><h2 style="display:inline">Size sweep</h2></summary>
+          <p class="lead">This sweep replaces the automatic X–Y table in the Excel (H16:I36). The first size that can recharge the battery is highlighted.</p>
+          <div class="tbl"><table id="sweepTbl"></table></div>
+        </details>
+      </section>
+
+      <section class="card" id="cebCard" hidden>
+        <h2>CEB connection check</h2>
+        <p class="lead">Energy the grid connection can deliver per day, compared with the site's daily consumption.</p>
+        <div class="tbl"><table id="cebTbl"></table></div>
+      </section>
+
+      <section class="notes">
+        <p class="gh">How the model works</p>
+        <ul>
+          <li>Solar produces from 06:00 to 18:00. During those hours the site draws the day-tariff hourly load. The battery carries the 12 h from 18:00 to 06:00: all peak and off-peak units, plus the one hour of day-tariff load that falls in that window.</li>
+          <li>The battery must also cover morning and evening hours when solar output is below the load. The array qualifies once its surplus on the design day can put that full amount back into the battery.</li>
+          <li>Changes from the Excel: day-tariff hours are 13 h throughout (Sheet1 D29 says 11). Non-TOU daytime units are spread per hour, where Sheet2 G19 added the daily figure to an hourly rate. DOD is now applied to the battery result.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+const HRS=['6–7','7–8','8–9','9–10','10–11','11–12','12–1','1–2','2–3','3–4','4–5','5–6'];
+const DEFAULTS={mode:'tou',peak:424,day:1350,off:485,monthly:2259,dayShare:60,days:30,minYield:3.25,avgMonthly:107,dod:90,eff:100,moduleW:585,batUnit:5,
+  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',project:'',site:'',preparedBy:'',refNo:''};
+const TEXT_KEYS=['project','site','preparedBy','refNo'];
+const NUM_KEYS=['peak','day','off','monthly','dayShare','days','minYield','avgMonthly','dod','eff','moduleW','batUnit','kva','pf','loadPct'];
+const CEB_H={peak:4,day:13,off:7,daypeak:17,dayoff:20,peakoff:11};
+const CEB_L={peak:'Peak',day:'Day',off:'Off-peak',daypeak:'Day & Peak',dayoff:'Day & Off-peak',peakoff:'Peak & Off-peak'};
+const STORE='solar-battery-calc-v1';
+const $=id=>document.getElementById(id);
+let state=load();
+let selected=null;
+
+// build profile inputs
+$('prof').innerHTML=HRS.map((h,i)=>`<label for="p${i}">${h}<input type="number" id="p${i}" min="0" step="0.01"></label>`).join('')+'<div class="sum" id="profSum"></div>';
+
+function load(){
+  try{const s=JSON.parse(localStorage.getItem(STORE)||'null');if(s&&typeof s==='object'&&Array.isArray(s.profile)&&s.profile.length===12)return Object.assign({},DEFAULTS,s);}catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULTS));
+}
+function save(){try{localStorage.setItem(STORE,JSON.stringify(state));}catch(e){}}
+
+function fill(){
+  NUM_KEYS.forEach(k=>{$(k).value=state[k];});
+  TEXT_KEYS.forEach(k=>{$(k).value=state[k]||'';});
+  state.profile.forEach((v,i)=>{$('p'+i).value=v;});
+  $('cebTime').value=state.cebTime;
+  setMode(state.mode,true);
+}
+function setMode(m,silent){
+  state.mode=m;
+  $('modeTou').setAttribute('aria-pressed',m==='tou');
+  $('modeFlat').setAttribute('aria-pressed',m!=='tou');
+  $('touRows').hidden=m!=='tou';$('flatRows').hidden=m==='tou';
+  if(!silent)update(true);
+}
+function readInputs(){
+  NUM_KEYS.forEach(k=>{const el=$(k);const v=parseFloat(el.value);const bad=el.value!==''&&(!isFinite(v)||v<0);el.setAttribute('aria-invalid',bad);state[k]=isFinite(v)&&v>=0?v:0;});
+  for(let i=0;i<12;i++){const el=$('p'+i);const v=parseFloat(el.value);state.profile[i]=isFinite(v)&&v>=0?v:0;el.setAttribute('aria-invalid',el.value!==''&&!(v>=0));}
+  state.cebTime=$('cebTime').value;
+  TEXT_KEYS.forEach(k=>{state[k]=$(k).value.trim();});
+}
+
+// ---------- model ----------
+function base(s){
+  const days=Math.max(s.days,1);
+  let dayM,nightM;
+  if(s.mode==='tou'){dayM=s.day;nightM=s.peak+s.off;}
+  else{const sh=Math.min(s.dayShare,100)/100;dayM=s.monthly*sh;nightM=s.monthly*(1-sh);}
+  const totalM=dayM+nightM;
+  const dh=dayM/days/13;                    // Sheet2 G19 / I35
+  const nightE=nightM/days+dh;              // 18:00–06:00 window incl. 1 h of day load
+  const nh=nightE/12;                       // Sheet2 G20
+  const psum=s.profile.reduce((a,b)=>a+b,0);
+  const scale=psum>0?s.minYield/psum:0;     // Sheet2 E16/D16
+  return {days,dayM,nightM,totalM,dh,nightE,nh,psum,scale,daily:totalM/days,eff:Math.max(Math.min(s.eff,100),1)/100,dod:Math.max(Math.min(s.dod,100),1)/100};
+}
+function at(b,s,P){
+  let deficit=0,excess=0;const gen=[];
+  for(let i=0;i<12;i++){const g=s.profile[i]*b.scale*P;gen.push(g);if(g<b.dh)deficit+=b.dh-g;else excess+=g-b.dh;}
+  const usable=deficit+12*b.nh;             // Sheet2 G21
+  const charge=usable/b.eff;
+  return {P,gen,deficit,excess,usable,charge,ok:excess>=charge-1e-9,bess:usable/b.dod};
+}
+function solve(b,s){
+  if(at(b,s,0).ok)return 0;
+  if(b.scale<=0)return null;
+  let lo=0,hi=1;
+  while(!at(b,s,hi).ok){lo=hi;hi*=2;if(hi>1e6)return null;}
+  for(let k=0;k<70;k++){const m=(lo+hi)/2;if(at(b,s,m).ok)hi=m;else lo=m;}
+  return hi;
+}
+
+// ---------- helpers ----------
+const fmt=(v,d=1)=>isFinite(v)?v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):'–';
+function niceStep(range,n){const raw=range/n;if(!(raw>0))return 1;const p=Math.pow(10,Math.floor(Math.log10(raw)));const f=raw/p;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p;}
+function niceCeil(v,n){const s=niceStep(v,n||5);return Math.ceil(v/s)*s;}
+function ticks(max,n){const s=niceStep(max,n);const t=[];for(let v=0;v<=max+1e-9;v+=s)t.push(+v.toFixed(6));return t;}
+
+let model=null;
+function update(resetSel){
+  readInputs();save();
+  const s=state,b=base(s);
+  const err=$('errBox');
+  $('profSum').textContent='Clear-day total '+fmt(b.psum,2)+' kWh per kWp';
+  let msg='';
+  if(b.totalM<=0)msg='Enter the monthly units from the electricity bill to size the system.';
+  else if(b.psum<=0||s.minYield<=0)msg='The solar profile and design-day yield must be above zero.';
+  const Pmin=msg?null:solve(b,s);
+  if(!msg&&Pmin===null)msg='No solar size can recharge the battery with these inputs. Check the hourly profile and yield.';
+  err.hidden=!msg;err.textContent=msg;
+  if(msg){['rBess','rPv'].forEach(id=>$(id).textContent='–');['rBessD','rPvD','rBessPick','rPvPick'].forEach(id=>$(id).textContent='–');
+    $('facts').innerHTML='';$('chart1').innerHTML='';$('chart2').innerHTML='';$('calcTbl').innerHTML='';$('sweepTbl').innerHTML='';$('selRead').innerHTML='';model=null;renderCeb(b,s,null);return;}
+
+  const atMin=at(b,s,Pmin);
+  const modW=Math.max(s.moduleW,1)/1000;
+  const nMod=Math.max(1,Math.ceil(Pmin/modW-1e-9));
+  const Pp=nMod*modW;
+  const atP=at(b,s,Pp);
+  const unit=Math.max(s.batUnit,0.1);
+  const nBat=Math.max(1,Math.ceil(atP.bess/unit-1e-9));
+  const offsetPv=s.avgMonthly>0?b.totalM/s.avgMonthly:NaN;  // Sheet1 I11
+
+  model={b,s,Pmin,atMin,Pp,atP,nMod,nBat,unit,offsetPv};
+
+  $('rBess').textContent=fmt(atMin.bess,1);
+  $('rBessD').textContent=fmt(atMin.usable,1)+' kWh usable per day at '+fmt(s.dod,0)+' % DOD';
+  $('rBessPick').textContent=nBat+' × '+fmt(unit,unit%1?1:0)+' kWh = '+fmt(nBat*unit,unit%1?1:0)+' kWh';
+  $('rPv').textContent=fmt(Pmin,2);
+  $('rPvD').textContent='Smallest array that can recharge the battery on a '+fmt(s.minYield,2)+' kWh/kWp day';
+  $('rPvPick').textContent=nMod+' × '+fmt(s.moduleW,0)+' Wp = '+fmt(Pp,2)+' kWp';
+
+  $('facts').innerHTML=[
+    ['Monthly consumption',fmt(b.totalM,0),'kWh'],
+    ['Daytime load',fmt(b.dh,2),'kW avg'],
+    ['Night load',fmt(b.nh,2),'kW avg'],
+    ['Night energy 18:00–06:00',fmt(b.nightE,1),'kWh'],
+    ['Solar for net-zero units',fmt(offsetPv,2),'kWp'],
+    ['Avg generation at '+fmt(Pp,2)+' kWp',fmt(Pp*s.avgMonthly,0),'kWh/mo'],
+  ].map(f=>`<div class="fact"><div class="k">${f[0]}</div><div class="v">${f[1]} <small>${f[2]}</small></div></div>`).join('');
+
+  // slider
+  const xmax=niceCeil(Math.max(Pmin*2.4,offsetPv*1.3||0,5),6);
+  const sl=$('selSize');sl.max=xmax;sl.step=xmax>200?1:0.1;
+  if(resetSel||selected===null||selected>xmax)selected=Pp;
+  sl.value=selected;
+  renderCalc();renderSweep();renderSel();renderCeb(b,s,Pp);
+}
+
+function renderSel(){
+  if(!model)return;
+  const {b,s,Pmin}=model;
+  const r=at(b,s,selected);
+  $('selOut').textContent=fmt(selected,1)+' kWp';
+  $('selRead').innerHTML=`<span class="pill ${r.ok?'ok':'no'}">${r.ok?'Can recharge battery':'Solar capacity not enough'}</span>
+    <span>BESS <b>${fmt(r.bess,1)} kWh</b></span><span>Battery use <b>${fmt(r.usable,1)} kWh/day</b></span>
+    <span>Surplus solar <b>${fmt(r.excess,1)} kWh/day</b></span>`;
+  drawChart1(selected);drawChart2(r);
+  $('flowLead').textContent='Hour by hour at '+fmt(selected,2)+' kWp on a '+fmt(s.minYield,2)+' kWh/kWp design day. Teal is the energy the battery has to deliver.';
+}
+
+// ---------- chart 1 ----------
+function drawChart1(sel){$('chart1').innerHTML=chart1Svg(sel);}
+function chart1Svg(sel){
+  const {b,s,Pmin}=model;
+  const W=680,H=300,L=52,R=18,T=18,B=42,pw=W-L-R,ph=H-T-B;
+  const xmax=+$('selSize').max;
+  const N=160,pts=[];
+  for(let i=0;i<=N;i++){const P=xmax*i/N;pts.push(at(b,s,P));}
+  const ymax=niceCeil(Math.max(pts[0].charge,1)*2,5);
+  const X=v=>L+v/xmax*pw, Y=v=>T+ph-Math.min(v,ymax*1.05)/ymax*ph;
+  let o=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Battery energy needed and solar surplus versus solar capacity"><defs><clipPath id="cp1"><rect x="${L}" y="${T}" width="${pw}" height="${ph}"/></clipPath></defs>`;
+  o+=`<rect class="bad" x="${L}" y="${T}" width="${X(Pmin)-L}" height="${ph}"/>`;
+  if(X(Pmin)-L>110)o+=`<text class="badt" x="${L+10}" y="${T+20}">Array too small</text>`;
+  ticks(ymax,5).forEach(v=>{o+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${fmt(v,0)}</text>`;});
+  ticks(xmax,8).forEach(v=>{o+=`<line class="ax" x1="${X(v)}" x2="${X(v)}" y1="${T+ph}" y2="${T+ph+4}"/><text x="${X(v)}" y="${T+ph+17}" text-anchor="middle">${fmt(v,v%1?1:0)}</text>`;});
+  o+=`<line class="ax" x1="${L}" x2="${W-R}" y1="${T+ph}" y2="${T+ph}"/>`;
+  o+=`<text x="${L+pw/2}" y="${H-4}" text-anchor="middle">Solar system capacity (kWp)</text>`;
+  o+=`<text transform="translate(13 ${T+ph/2}) rotate(-90)" text-anchor="middle">kWh per day</text>`;
+  const path=k=>pts.map((p,i)=>(i?'L':'M')+X(p.P).toFixed(1)+' '+Y(p[k]).toFixed(1)).join('');
+  o+=`<g clip-path="url(#cp1)"><path class="surplus" d="${path('excess')}"/><path class="need" d="${path('charge')}"/></g>`;
+  const m=at(b,s,Pmin);
+  o+=`<line class="vmin" x1="${X(Pmin)}" x2="${X(Pmin)}" y1="${T}" y2="${T+ph}"/>`;
+  o+=`<circle class="dot" cx="${X(Pmin)}" cy="${Y(m.charge)}" r="5"/>`;
+  const lx=X(Pmin)+12, anchor=lx>W-200?'end':'start', tx=anchor==='end'?X(Pmin)-12:lx;
+  o+=`<text class="lbl" x="${tx}" y="${Y(m.charge)-16}" text-anchor="${anchor}">Min ${fmt(Pmin,2)} kWp · ${fmt(m.bess,1)} kWh BESS</text>`;
+  const r=at(b,s,sel);
+  o+=`<line class="sel" x1="${X(sel)}" x2="${X(sel)}" y1="${T}" y2="${T+ph}"/><circle class="dotsel" cx="${X(sel)}" cy="${Y(r.charge)}" r="4"><title>${fmt(sel,2)} kWp: ${fmt(r.charge,1)} kWh needed</title></circle>`;
+  o+='</svg>';
+  return o;
+}
+
+// ---------- chart 2 ----------
+function drawChart2(r){$('chart2').innerHTML=chart2Svg(r);}
+function chart2Svg(r){
+  const {b}=model;
+  const W=680,H=280,L=46,R=26,T=16,B=40,pw=W-L-R,ph=H-T-B;
+  const ymax=niceCeil(Math.max(Math.max(...r.gen),b.dh,b.nh,0.1)*1.1,5);
+  const X=h=>L+h/24*pw, Y=v=>T+ph-v/ymax*ph, bw=pw/24;
+  let o=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hourly solar generation, load and battery supply">`;
+  o+=`<rect class="nightbg" x="${X(0)}" y="${T}" width="${X(6)-X(0)}" height="${ph}"/><rect class="nightbg" x="${X(18)}" y="${T}" width="${X(24)-X(18)}" height="${ph}"/>`;
+  ticks(ymax,5).forEach(v=>{o+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${fmt(v,v%1?1:0)}</text>`;});
+  // night battery supply
+  [[0,6],[18,24]].forEach(([a,z])=>{o+=`<rect class="bsup" x="${X(a)}" y="${Y(b.nh)}" width="${X(z)-X(a)}" height="${Y(0)-Y(b.nh)}"><title>Battery supplies ${fmt(b.nh,2)} kWh each hour</title></rect>`;});
+  r.gen.forEach((g,i)=>{
+    const h=6+i,x=X(h)+1.5,w=bw-3,used=Math.min(g,b.dh);
+    o+=`<rect class="used" x="${x}" y="${Y(used)}" width="${w}" height="${Y(0)-Y(used)}"><title>${HRS[i]}: solar ${fmt(g,2)} kWh</title></rect>`;
+    if(g>b.dh)o+=`<rect class="over" x="${x}" y="${Y(g)}" width="${w}" height="${Y(b.dh)-Y(g)}"><title>${HRS[i]}: surplus ${fmt(g-b.dh,2)} kWh</title></rect>`;
+    else o+=`<rect class="bsup" x="${x}" y="${Y(b.dh)}" width="${w}" height="${Y(g)-Y(b.dh)}"><title>${HRS[i]}: battery ${fmt(b.dh-g,2)} kWh</title></rect>`;
+  });
+  const d=`M${X(0)} ${Y(b.nh)}H${X(6)}V${Y(b.dh)}H${X(18)}V${Y(b.nh)}H${X(24)}`;
+  o+=`<path class="load" d="${d}"/>`;
+  o+=`<line class="ax" x1="${L}" x2="${W-R}" y1="${T+ph}" y2="${T+ph}"/>`;
+  for(let h=0;h<=24;h+=3)o+=`<text x="${X(h)}" y="${T+ph+16}" text-anchor="middle">${String(h).padStart(2,'0')}:00</text>`;
+  o+=`<text x="${X(3)}" y="${T+14}" text-anchor="middle">night · battery</text><text x="${X(21)}" y="${T+14}" text-anchor="middle">night · battery</text>`;
+  o+=`<text transform="translate(12 ${T+ph/2}) rotate(-90)" text-anchor="middle">kWh per hour</text>`;
+  o+='</svg>';
+  return o;
+}
+
+// ---------- tables ----------
+function calcRows(){
+  const {b,s,Pmin,atMin}=model;
+  const day=s.mode==='tou';
+  const rows=[
+    ['Daytime hourly load', day?`Day ${fmt(s.day,0)} ÷ ${fmt(b.days,0)} d ÷ 13 h`:`${fmt(s.monthly,0)} × ${fmt(s.dayShare,0)} % ÷ ${fmt(b.days,0)} d ÷ 13 h`, fmt(b.dh,3)+' kWh/h','Sheet2 G19'],
+    ['Night energy, 18:00–06:00', day?`(Peak ${fmt(s.peak,0)} + Off-peak ${fmt(s.off,0)}) ÷ ${fmt(b.days,0)} d + 1 h of day load`:`${fmt(s.monthly,0)} × ${fmt(100-s.dayShare,0)} % ÷ ${fmt(b.days,0)} d + 1 h of day load`, fmt(b.nightE,2)+' kWh',''],
+    ['Night hourly load','Night energy ÷ 12 h',fmt(b.nh,3)+' kWh/h','Sheet2 G20'],
+    ['Profile scaling',`Design-day yield ${fmt(s.minYield,2)} ÷ clear-day total ${fmt(b.psum,2)}`,fmt(b.scale,4),'Sheet2 E16/D16'],
+    ['Daytime shortfall at '+fmt(Pmin,2)+' kWp','Hours where solar < daytime load, summed',fmt(atMin.deficit,2)+' kWh','Sheet2 H16'],
+    ['Battery energy per day','Shortfall + 12 × night hourly load',fmt(atMin.usable,2)+' kWh','Sheet2 G21'],
+    ['Energy to recharge',`Battery energy ÷ ${fmt(s.eff,0)} % efficiency`,fmt(atMin.charge,2)+' kWh',''],
+    ['Surplus solar for charging','Hours where solar > daytime load, summed',fmt(atMin.excess,2)+' kWh','Sheet2 I16'],
+    ['Minimum solar system','Smallest size where surplus ≥ energy to recharge',fmt(Pmin,2)+' kWp','C42',1],
+    ['Required BESS capacity',`Battery energy ÷ ${fmt(s.dod,0)} % DOD`,fmt(atMin.bess,2)+' kWh','C41',1],
+  ];
+  return rows;
+}
+function renderCalc(){const rows=calcRows();
+  $('calcTbl').innerHTML='<thead><tr><th>Step</th><th class="n">Value</th></tr></thead><tbody>'+rows.map(r=>`<tr class="${r[4]?'key':''}"><td>${r[0]}${r[3]?`<span class="ref">${r[3]}</span>`:''}<span class="f">${r[1]}</span></td><td class="n">${r[2]}</td></tr>`).join('')+'</tbody>';
+}
+function sweepData(){
+  const {b,s,Pmin}=model;
+  const step=niceStep(Pmin*1.6,10);
+  const start=Math.max(step,Math.floor(Pmin*0.6/step)*step);
+  let firstDone=false;const out=[];
+  for(let i=0;i<20;i++){
+    const P=+(start+i*step).toFixed(4),r=at(b,s,P);
+    let cls=r.ok?'':'short';if(r.ok&&!firstDone){cls='first';firstDone=true;}
+    out.push({P,r,cls,dec:step%1?1:0});
+  }
+  return out;
+}
+function renderSweep(){
+  let h='<thead><tr><th class="n">Solar kWp</th><th class="n">Battery use kWh/day</th><th class="n">BESS kWh</th><th class="n">Surplus kWh/day</th><th>Status</th></tr></thead><tbody>';
+  sweepData().forEach(({P,r,cls,dec})=>{h+=`<tr class="${cls}"><td class="n">${fmt(P,dec)}</td><td class="n">${fmt(r.usable,2)}</td><td class="n">${fmt(r.bess,2)}</td><td class="n">${fmt(r.excess,2)}</td><td>${r.ok?'OK':'Solar capacity not enough'}</td></tr>`;});
+  $('sweepTbl').innerHTML=h+'</tbody>';
+}
+function cebData(b,s,P){
+  const hrs=CEB_H[s.cebTime]||0;
+  const ceb=s.kva*s.pf*(s.loadPct/100)*hrs;
+  const solar=P==null?0:P*s.minYield;
+  const total=ceb+solar;
+  const ok=total>=b.daily;
+  return {ok,status:ok?'Covered':'Short by '+fmt(b.daily-total,1)+' kWh',rows:[
+    ['Grid hours used',CEB_L[s.cebTime]+' (Sheet1 C17)',fmt(hrs,0)+' h'],
+    ['Daily energy from CEB',`${fmt(s.kva,0)} kVA × ${fmt(s.pf,2)} PF × ${fmt(s.loadPct,0)} % × ${fmt(hrs,0)} h (C21)`,fmt(ceb,1)+' kWh'],
+    ['Solar on design day',P==null?'–':`${fmt(P,2)} kWp × ${fmt(s.minYield,2)} kWh/kWp (C10)`,fmt(solar,1)+' kWh'],
+    ['Total minimum energy cover','CEB + solar (C22)',fmt(total,1)+' kWh'],
+    ['Site daily consumption','Monthly units ÷ billing days',fmt(b.daily,1)+' kWh'],
+  ]};
+}
+function renderCeb(b,s,P){
+  const open=$('cebBox').open;$('cebCard').hidden=!open;if(!open)return;
+  const d=cebData(b,s,P);
+  $('cebTbl').innerHTML='<tbody>'+d.rows.map(r=>`<tr><td>${r[0]}<span class="f">${r[1]}</span></td><td class="n">${r[2]}</td></tr>`).join('')+
+  `<tr class="key"><td>Result</td><td class="n"><span class="pill ${d.ok?'ok':'no'}">${d.status}</span></td></tr></tbody>`;
+}
+
+// ---------- events ----------
+$('form').addEventListener('input',e=>{if(e.target.id!=='selSize')update(true);});
+$('form').addEventListener('submit',e=>e.preventDefault());
+$('modeTou').addEventListener('click',()=>setMode('tou'));
+$('modeFlat').addEventListener('click',()=>setMode('flat'));
+$('cebBox').addEventListener('toggle',()=>{if(model)renderCeb(model.b,state,model.Pp);else renderCeb(base(state),state,null);});
+$('selSize').addEventListener('input',e=>{selected=+e.target.value;renderSel();});
+$('resetBtn').addEventListener('click',()=>{state=JSON.parse(JSON.stringify(DEFAULTS));fill();update(true);toast('Reset to example values');});
+$('copyBtn').addEventListener('click',()=>{
+  if(!model){toast('Nothing to copy yet');return;}
+  const {b,s,Pmin,atMin,Pp,nMod,nBat,unit}=model;
+  const t=[
+    'SOLAR BATTERY SIZING',
+    s.mode==='tou'?`Consumption: Peak ${s.peak} / Day ${s.day} / Off-peak ${s.off} kWh per month`:`Consumption: ${s.monthly} kWh per month, ${s.dayShare}% daytime`,
+    `Design-day yield: ${s.minYield} kWh/kWp · DOD ${s.dod}% · Efficiency ${s.eff}%`,
+    '',
+    `Required BESS capacity: ${fmt(atMin.bess,1)} kWh (${fmt(atMin.usable,1)} kWh usable per day)`,
+    `Minimum solar system: ${fmt(Pmin,2)} kWp`,
+    `Selection: ${nMod} x ${s.moduleW} Wp = ${fmt(Pp,2)} kWp; ${nBat} x ${unit} kWh battery = ${fmt(nBat*unit,1)} kWh`,
+    `Night load ${fmt(b.nh,2)} kW avg, daytime load ${fmt(b.dh,2)} kW avg`,
+  ].join('\n');
+  const done=()=>toast('Results copied');
+  try{navigator.clipboard.writeText(t).then(done,()=>fallbackCopy(t));}catch(e){fallbackCopy(t);}
+});
+function fallbackCopy(t){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy');}catch(e){}ta.remove();toast(ok?'Results copied':'Copy blocked here. Select the figures on the page instead.');}
+let tt;function toast(m){const el=$('toast');el.textContent=m;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,2200);}
+
+// ---------- PDF report (self-contained writer, no library) ----------
+const WIN={'€':128,'‚':130,'…':133,'•':149,'–':150,'—':151,'‘':145,'’':146,'“':147,'”':148,'™':153};
+function MiniPDF(){this.pages=[];this.imgs=[];this.k=72/25.4;this.PH=841.89;this.mctx=document.createElement('canvas').getContext('2d');this.addPage();}
+MiniPDF.prototype={
+  addPage(){this.cur=[];this.pages.push(this.cur);},
+  n(v){return (+v).toFixed(2);},
+  X(mm){return this.n(mm*this.k);},
+  Y(mm){return this.n(this.PH-mm*this.k);},
+  col(c,stroke){return c.map(v=>(v/255).toFixed(3)).join(' ')+(stroke?' RG':' rg');},
+  clean(s){return String(s==null?'':s).replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/[‐‑−]/g,'-').replace(/\s+/g,' ');},
+  width(s,size,bold){this.mctx.font=(bold?'bold ':'')+'100px Helvetica, Arial, "Liberation Sans", sans-serif';return this.mctx.measureText(this.clean(s)).width/100*size/this.k;},
+  enc(s){let o='';for(const ch of s){let c=ch.codePointAt(0);if(WIN[ch])c=WIN[ch];else if(c>255||(c>=128&&c<160))c=63;const t=String.fromCharCode(c);o+=(t==='('||t===')'||t==='\\')?'\\'+t:t;}return o;},
+  rect(x,y,w,h,o){o=o||{};const p=this.cur;p.push('q');if(o.fill)p.push(this.col(o.fill));if(o.stroke){p.push(this.col(o.stroke,1));p.push(this.n((o.lw||0.3)*this.k)+' w');}
+    p.push(`${this.X(x)} ${this.Y(y+h)} ${this.n(w*this.k)} ${this.n(h*this.k)} re ${o.fill&&o.stroke?'B':o.fill?'f':'S'}`);p.push('Q');},
+  line(x1,y1,x2,y2,c,lw,dash){this.cur.push('q',this.col(c||[0,0,0],1),this.n((lw||0.3)*this.k)+' w',dash?`[${dash.map(d=>this.n(d*this.k)).join(' ')}] 0 d`:'[] 0 d',`${this.X(x1)} ${this.Y(y1)} m ${this.X(x2)} ${this.Y(y2)} l S`,'Q');},
+  text(s,x,y,o){o=o||{};const size=o.size||9;let str=this.clean(s);
+    if(o.maxW&&this.width(str,size,o.bold)>o.maxW){while(str.length>1&&this.width(str+'…',size,o.bold)>o.maxW)str=str.slice(0,-1);str+='…';}
+    const w=this.width(str,size,o.bold);let xx=x;if(o.align==='right')xx=x-w;else if(o.align==='center')xx=x-w/2;
+    this.cur.push(`BT /${o.bold?'F2':'F1'} ${size} Tf ${this.col(o.color||[21,32,43])} ${this.X(xx)} ${this.Y(y)} Td (${this.enc(str)}) Tj ET`);return w;},
+  wrap(s,maxW,size,bold){const words=this.clean(s).split(' ');const lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(cur&&this.width(t,size,bold)>maxW){lines.push(cur);cur=w;}else cur=t;}if(cur)lines.push(cur);return lines.length?lines:[''];},
+  image(img,x,y,w,h){const id='Im'+(this.imgs.length+1);this.imgs.push(Object.assign({id},img));this.cur.push(`q ${this.n(w*this.k)} 0 0 ${this.n(h*this.k)} ${this.X(x)} ${this.Y(y+h)} cm /${id} Do Q`);},
+  output(title){
+    const chunks=[];let len=0;const offs=[];
+    const bin=s=>{const a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i)&255;return a;};
+    const push=a=>{if(typeof a==='string')a=bin(a);chunks.push(a);len+=a.length;};
+    const obj=(n,parts)=>{offs[n]=len;push(n+' 0 obj\n');parts.forEach(push);push('\nendobj\n');};
+    push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+    const nI=this.imgs.length,nP=this.pages.length,iB=6,pB=6+nI;
+    const res=`<< /Font << /F1 3 0 R /F2 4 0 R >> /XObject << ${this.imgs.map((m,i)=>`/${m.id} ${iB+i} 0 R`).join(' ')} >> >>`;
+    obj(1,['<< /Type /Catalog /Pages 2 0 R >>']);
+    obj(2,[`<< /Type /Pages /Kids [${this.pages.map((_,i)=>`${pB+2*i+1} 0 R`).join(' ')}] /Count ${nP} >>`]);
+    obj(3,['<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>']);
+    obj(4,['<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>']);
+    obj(5,[`<< /Title (${this.enc(this.clean(title||'Report'))}) /Producer (Solar Battery Calculator) >>`]);
+    this.imgs.forEach((m,i)=>obj(iB+i,[`<< /Type /XObject /Subtype /Image /Width ${m.pw} /Height ${m.ph} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${m.bytes.length} >>\nstream\n`,m.bytes,'\nendstream']));
+    this.pages.forEach((pg,i)=>{const c=pg.join('\n');obj(pB+2*i,[`<< /Length ${c.length} >>\nstream\n`,c,'\nendstream']);
+      obj(pB+2*i+1,[`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources ${res} /Contents ${pB+2*i} 0 R >>`]);});
+    const N=pB+2*nP,xref=len;let x=`xref\n0 ${N}\n0000000000 65535 f \n`;
+    for(let i=1;i<N;i++)x+=String(offs[i]).padStart(10,'0')+' 00000 n \n';
+    push(x);push(`trailer\n<< /Size ${N} /Root 1 0 R /Info 5 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+    const out=new Uint8Array(len);let o=0;chunks.forEach(c=>{out.set(c,o);o+=c.length;});return out;
+  }
+};
+
+const PRINT_CSS=`<style>text{font-family:Helvetica,Arial,sans-serif;font-size:11px;fill:#5A6672}
+.ax{stroke:#C9D1D9;stroke-width:1}.gl{stroke:#E4E9EE;stroke-width:1}.need{fill:none;stroke:#0E7562;stroke-width:2.5}.surplus{fill:none;stroke:#CF8306;stroke-width:2.5}
+.bad{fill:#FBE3D6}.badt{fill:#B93D0B;font-size:13px;font-weight:bold}.vmin{stroke:#15202B;stroke-width:1.2;stroke-dasharray:4 3}.lbl{fill:#15202B;font-weight:bold}
+.sel{stroke:#5A6672;stroke-width:1}.dot{fill:#FFFFFF;stroke:#15202B;stroke-width:2}.dotsel{fill:#15202B}.nightbg{fill:#EEF1F5}.used{fill:#F5DDAA}.over{fill:#CF8306}
+.bsup{fill:#BFE3D9}.load{fill:none;stroke:#15202B;stroke-width:2}</style>`;
+function svgToJpeg(svg,w,h){
+  return new Promise((resolve,reject)=>{
+    const src=svg.replace('<svg ',`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" `).replace(/(<svg[^>]*>)/,'$1'+PRINT_CSS).replace(/<title>.*?<\/title>/g,'');
+    const img=new Image();
+    img.onload=()=>{try{const sc=3,c=document.createElement('canvas');c.width=w*sc;c.height=h*sc;const g=c.getContext('2d');g.fillStyle='#FFFFFF';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
+      const b64=c.toDataURL('image/jpeg',0.92).split(',')[1];const bs=atob(b64);const bytes=new Uint8Array(bs.length);for(let i=0;i<bs.length;i++)bytes[i]=bs.charCodeAt(i);
+      resolve({bytes,pw:c.width,ph:c.height});}catch(e){reject(e);}};
+    img.onerror=()=>reject(new Error('chart image failed'));
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(src);
+  });
+}
+
+async function buildReport(){
+  const {b,s,Pmin,atMin,Pp,atP,nMod,nBat,unit,offsetPv}=model;
+  const selR=at(b,s,selected);
+  const [img1,img2]=await Promise.all([svgToJpeg(chart1Svg(selected),680,300),svgToJpeg(chart2Svg(selR),680,280)]);
+  const pdf=new MiniPDF();
+  const K={ink:[21,32,43],muted:[90,102,114],line:[213,220,227],sun:[207,131,6],sunSoft:[245,221,170],batt:[14,117,98],battSoft:[191,227,217],warn:[185,61,11],warnSoft:[251,227,214],okSoft:[212,238,231],band:[238,241,244]};
+  const M=16,CW=210-2*M,BOT=297-18;
+  let y=M;
+  const ensure=h=>{if(y+h>BOT){pdf.addPage();y=M;}};
+  const H=(title,need)=>{ensure((need||0)+14);y+=3;pdf.text(title,M,y+4,{size:11.5,bold:true});y+=6.5;pdf.line(M,y,M+CW,y,K.ink,0.4);y+=3;};
+  const dateStr=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  const dec=unit%1?1:0;
+
+  // title block
+  pdf.text('Solar Battery Sizing Report',M,y+7,{size:20,bold:true});
+  pdf.text(dateStr,M+CW,y+7,{size:9,color:K.muted,align:'right'});
+  y+=12.5;
+  pdf.text('BESS and minimum PV array to carry the night load and daytime shortfall on a low-yield design day.',M,y+3,{size:9,color:K.muted});
+  y+=8;
+  pdf.rect(M,y,CW,15,{fill:K.band});
+  const fw=CW/4;
+  [['Project / client',s.project],['Site location',s.site],['Prepared by',s.preparedBy],['Reference no.',s.refNo]].forEach((f,i)=>{
+    const x=M+i*fw+3.5;
+    pdf.text(f[0].toUpperCase(),x,y+5,{size:6.5,bold:true,color:K.muted});
+    pdf.text(f[1]||'–',x,y+10.5,{size:9.5,bold:!!f[1],color:f[1]?K.ink:K.muted,maxW:fw-6});
+  });
+  y+=21;
+
+  // result plates
+  const bw=(CW-6)/2,bh=37;
+  const plate=(x,soft,label,ref,num,u,detail,pick)=>{
+    pdf.rect(x,y,bw,7,{fill:soft});
+    pdf.rect(x,y,bw,bh,{stroke:K.ink,lw:0.5});
+    pdf.text(label,x+3.5,y+4.8,{size:7.5,bold:true});
+    pdf.text(ref,x+bw-3.5,y+4.8,{size:7.5,color:K.muted,align:'right'});
+    const nw=pdf.text(num,x+3.5,y+19.5,{size:28,bold:true});
+    pdf.text(u,x+3.5+nw+2,y+19.5,{size:12,bold:true,color:K.muted});
+    pdf.text(detail,x+3.5,y+25.5,{size:8,color:K.muted,maxW:bw-7});
+    pdf.line(x,y+29,x+bw,y+29,K.line,0.3,[1,1]);
+    pdf.text('Selection',x+3.5,y+33.8,{size:8.5,color:K.muted});
+    pdf.text(pick,x+bw-3.5,y+33.8,{size:8.5,bold:true,align:'right'});
+  };
+  plate(M,K.battSoft,'REQUIRED BESS CAPACITY','C41',fmt(atMin.bess,1),'kWh',`${fmt(atMin.usable,1)} kWh usable per day at ${fmt(s.dod,0)} % DOD`,`${nBat} × ${fmt(unit,dec)} kWh = ${fmt(nBat*unit,dec)} kWh`);
+  plate(M+bw+6,K.sunSoft,'MINIMUM SOLAR SYSTEM','C42',fmt(Pmin,2),'kWp',`Recharges the battery on a ${fmt(s.minYield,2)} kWh/kWp design day`,`${nMod} × ${fmt(s.moduleW,0)} Wp = ${fmt(Pp,2)} kWp`);
+  y+=bh+4;
+
+  const pairs=arr=>{const cw=(CW-10)/2;for(let i=0;i<arr.length;i+=2){ensure(6.6);[arr[i],arr[i+1]].forEach((p,j)=>{if(!p)return;const x=M+j*(cw+10);
+    pdf.text(p[0],x,y+4.4,{size:8.8,color:K.muted,maxW:cw-34});pdf.text(p[1],x+cw,y+4.4,{size:8.8,bold:true,align:'right'});pdf.line(x,y+6.3,x+cw,y+6.3,K.line,0.25);});y+=6.6;}};
+  const legend=items=>{ensure(6);let x=M;items.forEach(([c,label,isLine])=>{const need=6+pdf.width(label,7.8)+6;if(x+need>M+CW){x=M;y+=5;}
+    if(isLine)pdf.rect(x,y+1.7,5,0.9,{fill:c});else pdf.rect(x,y+0.6,4,3,{fill:c});x+=isLine?6.5:5.5;x+=pdf.text(label,x,y+3.4,{size:7.8,color:K.muted})+6;});y+=7;};
+
+  // inputs
+  H('Design inputs');
+  const tou=s.mode==='tou';
+  const inp=[['Tariff',tou?'TOU':'Non-TOU'],['Billing days',fmt(b.days,0)+' days']];
+  if(tou)inp.push(['Peak units (18:30–22:30)',fmt(s.peak,0)+' kWh/mo'],['Day units (05:30–18:30)',fmt(s.day,0)+' kWh/mo'],['Off-peak units (22:30–05:30)',fmt(s.off,0)+' kWh/mo'],['Total monthly units',fmt(b.totalM,0)+' kWh/mo']);
+  else inp.push(['Monthly units',fmt(s.monthly,0)+' kWh/mo'],['Used in daytime',fmt(s.dayShare,0)+' %']);
+  inp.push(['Design-day yield',fmt(s.minYield,2)+' kWh/kWp'],['Average monthly yield',fmt(s.avgMonthly,0)+' kWh/kWp'],['Depth of discharge',fmt(s.dod,0)+' %'],['Round-trip efficiency',fmt(s.eff,0)+' %'],['PV module rating',fmt(s.moduleW,0)+' Wp'],['Battery unit size',fmt(unit,dec)+' kWh']);
+  pairs(inp);
+
+  H('Key figures');
+  pairs([['Daytime load (avg)',fmt(b.dh,2)+' kW'],['Night load (avg)',fmt(b.nh,2)+' kW'],['Night energy 18:00–06:00',fmt(b.nightE,1)+' kWh'],['Battery energy per day',fmt(atMin.usable,1)+' kWh'],
+    ['Solar for net-zero units',fmt(offsetPv,2)+' kWp'],[`Avg generation at ${fmt(Pp,2)} kWp`,fmt(Pp*s.avgMonthly,0)+' kWh/mo'],[`BESS at ${fmt(Pp,2)} kWp`,fmt(atP.bess,1)+' kWh'],[`Surplus solar at ${fmt(Pp,2)} kWp`,fmt(atP.excess,1)+' kWh/day']]);
+
+  // chart 1
+  let ch1=CW*300/680,cw1=CW;
+  const avail=BOT-y-14-9;
+  if(avail<ch1&&avail>=58){ch1=avail;cw1=ch1*680/300;}
+  H('Battery requirement vs solar capacity',ch1+8);
+  pdf.image(img1,M+(CW-cw1)/2,y,cw1,ch1);y+=ch1+2;
+  legend([[K.batt,'Energy needed to recharge battery (kWh/day)',1],[K.sun,'Surplus solar available for charging (kWh/day)',1],[K.warnSoft,'Array too small']]);
+
+  // selected design + chart 2
+  const ch2=CW*280/680;
+  H(`Selected design: ${fmt(selected,2)} kWp`,ch2+30);
+  pairs([['Status',selR.ok?'Can recharge battery':'Solar capacity not enough'],['BESS required',fmt(selR.bess,1)+' kWh'],['Battery energy per day',fmt(selR.usable,1)+' kWh'],['Surplus solar',fmt(selR.excess,1)+' kWh/day']]);
+  y+=3;pdf.text(`Design-day energy flow at ${fmt(selected,2)} kWp (${fmt(s.minYield,2)} kWh/kWp day)`,M,y+3,{size:9,bold:true});y+=5.5;
+  pdf.image(img2,M,y,CW,ch2);y+=ch2+2;
+  legend([[K.sunSoft,'Solar used directly'],[K.sun,'Surplus solar, charges battery'],[K.battSoft,'Supplied by battery'],[K.ink,'Site load',1]]);
+
+  // calculation table
+  const rowTable=(rows,withRef)=>{
+    const vW=34,rW=withRef?24:0,tW=CW-vW-rW-4;
+    rows.forEach(r=>{const sub=pdf.wrap(r[1],tW,7.4);const h=6.2+sub.length*3.4;ensure(h);
+      if(r[4])pdf.rect(M,y,CW,h,{fill:K.band});
+      pdf.text(r[0],M+1.5,y+4.4,{size:8.8,bold:!!r[4],maxW:tW});
+      sub.forEach((l,i)=>pdf.text(l,M+1.5,y+8+i*3.4,{size:7.4,color:K.muted}));
+      if(withRef&&r[3])pdf.text(r[3],M+CW-vW-2,y+4.4,{size:7.4,color:K.muted,align:'right'});
+      pdf.text(r[2],M+CW-1.5,y+4.4,{size:8.8,bold:true,align:'right'});
+      y+=h;pdf.line(M,y,M+CW,y,K.line,0.25);});
+  };
+  H('Calculation at the minimum solar size',40);
+  rowTable(calcRows(),true);
+
+  // sweep
+  H('Size sweep',30);
+  const cols=[['Solar kWp',26],['Battery use kWh/day',38],['BESS kWh',30],['Surplus kWh/day',34],['Status',CW-128]];
+  let cx=M;cols.forEach((c,i)=>{pdf.text(c[0].toUpperCase(),i<4?cx+c[1]-2:cx+3,y+4,{size:6.8,bold:true,color:K.muted,align:i<4?'right':'left'});cx+=c[1];});
+  y+=6;pdf.line(M,y,M+CW,y,K.line,0.3);
+  sweepData().forEach(({P,r,cls,dec})=>{ensure(5.6);if(cls==='first')pdf.rect(M,y,CW,5.6,{fill:K.okSoft});
+    const col=cls==='short'?K.muted:K.ink,vals=[fmt(P,dec),fmt(r.usable,2),fmt(r.bess,2),fmt(r.excess,2),r.ok?'OK':'Solar capacity not enough'];
+    let x=M;cols.forEach((c,i)=>{pdf.text(vals[i],i<4?x+c[1]-2:x+3,y+4,{size:8.2,color:col,bold:cls==='first',align:i<4?'right':'left'});x+=c[1];});
+    y+=5.6;pdf.line(M,y,M+CW,y,K.line,0.2);});
+
+  // CEB
+  if($('cebBox').open){
+    const d=cebData(b,s,Pp);
+    H('CEB connection check',40);
+    rowTable(d.rows.map(r=>[r[0],r[1],r[2],'']).concat([['Result','Total minimum energy cover vs site daily consumption',d.status,'',1]]),false);
+  }
+
+  // notes
+  H('Model notes',30);
+  ['Solar produces from 06:00 to 18:00. During those hours the site draws the day-tariff hourly load. The battery carries the 12 h from 18:00 to 06:00: all peak and off-peak units, plus the one hour of day-tariff load that falls in that window.',
+   'The battery also covers morning and evening hours when solar output is below the load. The array qualifies once its surplus on the design day can put that full amount back into the battery.',
+   'The hourly solar profile is a clear-day 1 kWp curve for Sri Lanka, scaled so the day totals the design-day yield.',
+   'Selections round up to whole PV modules and whole battery units. Battery figures are at the stated DOD and efficiency.'
+  ].forEach(t=>{const ls=pdf.wrap(t,CW-6,8.4);ensure(ls.length*4+2);pdf.text('•',M+1,y+3.6,{size:8.4,color:K.muted});ls.forEach((l,i)=>pdf.text(l,M+5,y+3.6+i*4,{size:8.4,color:K.muted}));y+=ls.length*4+2;});
+
+  // footers
+  const nP=pdf.pages.length,keep=pdf.cur;
+  pdf.pages.forEach((pg,i)=>{pdf.cur=pg;pdf.line(M,297-12,M+CW,297-12,K.line,0.3);
+    pdf.text('Solar Battery Calculator'+(s.project?' · '+s.project:''),M,297-8,{size:7.5,color:K.muted,maxW:CW-30});
+    pdf.text(`Page ${i+1} of ${nP}`,M+CW,297-8,{size:7.5,color:K.muted,align:'right'});});
+  pdf.cur=keep;
+  return pdf.output('Solar Battery Sizing Report'+(s.project?' - '+s.project:''));
+}
+function reportName(){
+  const s=state,d=new Date(),ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const p=(s.project||'').replace(/[^A-Za-z0-9 _-]+/g,'').trim().replace(/\s+/g,'-').slice(0,50);
+  return 'Battery-Sizing-Report'+(p?'-'+p:'')+'-'+ds+'.pdf';
+}
+async function deliverPdf(bytes,name){
+  const blob=new Blob([bytes],{type:'application/pdf'});
+  if(window.claude&&typeof window.claude.use==='function'){
+    let dl=null;try{dl=await window.claude.use('downloads');}catch(e){}
+    if(!dl){toast('Download is not available in this view');return;}
+    try{const r=await dl.save({filename:name,data:blob});if(r&&r.status==='saved')toast('Report saved');}
+    catch(err){const c=err&&err.code;if(c==='declined')return;toast(c==='rate_limited'?'A save prompt is already open':'Download is not available in this view');}
+    return;
+  }
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);toast('Report downloaded');
+}
+async function downloadReport(){
+  if(!model){toast('Enter the monthly units first');return;}
+  const btn=$('pdfBtn');btn.disabled=true;btn.textContent='Preparing report…';
+  try{const bytes=await buildReport();await deliverPdf(bytes,reportName());}
+  catch(e){console.error(e);toast('Could not create the report. Try again.');}
+  finally{btn.disabled=false;btn.textContent='Download PDF report';}
+}
+$('pdfBtn').addEventListener('click',downloadReport);
+
+// ---------- team history (shared db) ----------
+let db=null,usr=null,uid=null,canWrite=true,isAdmin=false,histDocs=[],histState='loading',loaded=null,confirmDel=null,renderTok=0;
+const keyOf=d=>d.owner+'/'+d.id;
+const itemRef=(owner,id)=>db.doc('teamcalcs/'+owner+'/items/'+id);
+const mayChange=d=>!!d&&(isAdmin||(!!uid&&d.owner===uid));
+const elx=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;};
+const when=t=>t?new Date(t).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+function errText(e,verb){const c=e&&e.code;
+  if(c==='invalid_argument')return 'You need Contributor access to '+verb+' team history. Ask the owner to change your access.';
+  if(c==='quota_exceeded')return 'The history is full. Delete old entries, then try again.';
+  if(c==='revoked'||c==='not_granted'||c==='capability_disabled')return 'Team history is not available in this view.';
+  return 'Could not '+verb+'. Check your connection and try again.';}
+
+function showTab(t){const h=t==='history';$('calcView').hidden=h;$('histView').hidden=!h;
+  $('tabCalc').setAttribute('aria-selected',String(!h));$('tabHist').setAttribute('aria-selected',String(h));if(h)renderHist();}
+$('tabCalc').addEventListener('click',()=>showTab('calc'));
+$('tabHist').addEventListener('click',()=>showTab('history'));
+$('histSearch').addEventListener('input',()=>renderHist());
+
+async function renderHist(){
+  const tok=++renderTok;
+  $('histCount').textContent=histState==='ready'&&histDocs.length?String(histDocs.length):'';
+  const q=$('histSearch').value.trim().toLowerCase();
+  const rows=histDocs.filter(d=>!q||[d.project,d.site,d.refNo,d.preparedBy].join(' ').toLowerCase().includes(q));
+  let names={};
+  if(usr&&rows.length){const ids=[...new Set(rows.map(r=>r.createdBy).filter(x=>typeof x==='string'))];if(ids.length){try{names=await usr.profiles(ids);}catch(e){}}}
+  if(tok!==renderTok)return;
+  const list=$('hlist');list.textContent='';
+  const info=$('histInfo');
+  $('histSearch').hidden=histState!=='ready'||!histDocs.length;
+  if(histState==='offline'){info.textContent='';list.appendChild(elx('div','empty','Team history works in the online app. This copy of the calculator does not save calculations.'));return;}
+  if(histState==='loading'){info.textContent='';list.appendChild(elx('div','empty','Loading saved calculations…'));return;}
+  if(histState==='error'){info.textContent='';list.appendChild(elx('div','empty','The history could not be loaded. Reload the page to try again.'));return;}
+  info.textContent=histDocs.length?(q?`${rows.length} of ${histDocs.length} calculations`:`${histDocs.length} saved calculation${histDocs.length===1?'':'s'}, newest first`)+(canWrite?'':' · view only'):'';
+  if(!histDocs.length){list.appendChild(elx('div','empty',canWrite?'No saved calculations yet. Enter a project name under Report details, then press Save to history.':'No saved calculations yet.'));return;}
+  if(!rows.length){list.appendChild(elx('div','empty',`No saved calculation matches "${$('histSearch').value.trim()}".`));return;}
+  rows.forEach(d=>list.appendChild(histItem(d,names)));
+}
+
+function histItem(d,names){
+  const r=d.results||{};
+  const it=elx('article','hitem'+(loaded&&keyOf(d)===keyOf(loaded)?' cur':''));
+  const c1=elx('div');c1.appendChild(elx('div','t',d.project||'Untitled'));
+  const sub=[d.site,d.refNo].filter(Boolean).join(' · ');if(sub)c1.appendChild(elx('div','m',sub));
+  const who=d.createdBy&&names[d.createdBy]?names[d.createdBy].name:'';
+  c1.appendChild(elx('div','m','Saved '+when(d.updatedAt||d.createdAt)+(who?' by '+who:'')+(d.preparedBy?' · prepared by '+d.preparedBy:'')));
+  const c2=elx('div','fig');
+  const fig=(k,v)=>{const sp=elx('span',null,k+' ');sp.appendChild(elx('b',null,v));c2.appendChild(sp);};
+  fig('BESS',fmt(r.bess,1)+' kWh');fig('Min. solar',fmt(r.pv,2)+' kWp');
+  if(r.nMod)fig('Modules',`${r.nMod} × ${fmt(r.moduleW,0)} Wp`);
+  if(r.nBat)fig('Batteries',`${r.nBat} × ${fmt(r.unit,r.unit%1?1:0)} kWh`);
+  fig('Units',fmt(r.totalM,0)+' kWh/mo');
+  const c3=elx('div','acts');
+  if(confirmDel===keyOf(d)){
+    c3.appendChild(elx('span',null,'Delete this entry?'));
+    const yes=elx('button','danger solid','Delete');yes.type='button';yes.onclick=()=>delEntry(d);
+    const no=elx('button',null,'Cancel');no.type='button';no.onclick=()=>{confirmDel=null;renderHist();};
+    c3.append(yes,no);
+  }else{
+    const op=elx('button',null,'Open');op.type='button';op.onclick=()=>{loadEntry(d);showTab('calc');try{window.scrollTo(0,0);}catch(e){}};
+    const pdfb=elx('button',null,'PDF');pdfb.type='button';pdfb.onclick=async()=>{loadEntry(d);await downloadReport();renderHist();};
+    c3.append(op,pdfb);
+    if(canWrite&&mayChange(d)){const del=elx('button','danger','Delete');del.type='button';del.onclick=()=>{confirmDel=keyOf(d);renderHist();};c3.appendChild(del);}
+  }
+  it.append(c1,c2,c3);
+  return it;
+}
+
+function loadEntry(d){
+  const st=JSON.parse(JSON.stringify(DEFAULTS));
+  Object.assign(st,d.inputs||{});
+  if(!Array.isArray(st.profile)||st.profile.length!==12)st.profile=DEFAULTS.profile.slice();
+  state=st;$('cebBox').open=!!d.cebOpen;
+  fill();update(true);
+  if(model&&typeof d.selected==='number'&&d.selected>0){selected=Math.min(d.selected,+$('selSize').max);$('selSize').value=selected;renderSel();}
+  setLoaded({id:d.id,owner:d.owner},d.project,d.updatedAt||d.createdAt);
+}
+function setLoaded(ref,project,t){
+  loaded=ref||null;
+  if(!loaded){$('banner').hidden=true;return;}
+  $('bannerText').textContent=`Saved entry: ${project||'Untitled'} · last saved ${when(t)}`;
+  $('updBtn').hidden=!(canWrite&&mayChange(loaded));$('banner').hidden=false;
+}
+$('closeBanner').addEventListener('click',()=>{setLoaded(null);renderHist();});
+
+function entryData(){
+  const {b,Pmin,atMin,Pp,nMod,nBat,unit}=model;
+  return {v:1,project:state.project,site:state.site,preparedBy:state.preparedBy,refNo:state.refNo,
+    inputs:JSON.parse(JSON.stringify(state)),cebOpen:$('cebBox').open,selected:+(+selected).toFixed(3),
+    results:{bess:+atMin.bess.toFixed(2),usable:+atMin.usable.toFixed(2),pv:+Pmin.toFixed(3),pvSel:+Pp.toFixed(3),nMod,moduleW:state.moduleW,nBat,unit,totalM:+b.totalM.toFixed(1),mode:state.mode},
+    updatedAt:Date.now()};
+}
+let saving=false;
+async function saveEntry(asUpdate){
+  if(saving)return;
+  if(!db){toast('Team history is not available in this view');return;}
+  if(!model){toast('Enter the monthly units first');return;}
+  if(!state.project){toast('Add a project name under Report details first');try{$('project').focus();}catch(e){}return;}
+  saving=true;const btn=asUpdate?$('updBtn'):$('saveBtn');btn.disabled=true;
+  const data=entryData();
+  try{
+    if(asUpdate&&loaded){if(!mayChange(loaded)){toast('Only an admin or the person who saved this entry can change it');return;}
+      await itemRef(loaded.owner,loaded.id).update(data);setLoaded(loaded,data.project,data.updatedAt);toast('Saved changes');}
+    else{if(!uid){toast('Sign in to Claude to save calculations');return;}
+      await db.doc('teamcalcs/'+uid).set({updatedAt:data.updatedAt});
+      data.createdAt=data.updatedAt;data.createdBy=uid;const ref=await db.collection('teamcalcs/'+uid+'/items').add(data);
+      setLoaded({id:ref.id,owner:uid},data.project,data.updatedAt);toast('Saved to history');}
+  }catch(e){toast(errText(e,'save to'));if(e&&e.code==='invalid_argument'){canWrite=false;applyWrite();}}
+  finally{saving=false;btn.disabled=false;}
+}
+async function delEntry(d){
+  if(!mayChange(d)){confirmDel=null;toast('Only an admin or the person who saved this entry can delete it');renderHist();return;}
+  try{await itemRef(d.owner,d.id).delete();confirmDel=null;if(loaded&&keyOf(loaded)===keyOf(d))setLoaded(null);toast('Entry deleted');}
+  catch(e){confirmDel=null;toast(errText(e,'delete from'));renderHist();}
+}
+function applyWrite(){$('saveBtn').hidden=!(db&&canWrite);$('updBtn').hidden=!(canWrite&&mayChange(loaded));renderHist();}
+$('saveBtn').addEventListener('click',()=>saveEntry(false));
+$('updBtn').addEventListener('click',()=>saveEntry(true));
+
+(async function initHistory(){
+  if(!(window.claude&&typeof window.claude.use==='function')){histState='offline';renderHist();return;}
+  try{const r=await Promise.all([window.claude.use('db'),window.claude.use('user')]);db=r[0];usr=r[1];}catch(e){}
+  if(!db){histState='offline';renderHist();return;}
+  if(usr){try{uid=await usr.id();isAdmin=!!(await usr.canEdit());const c=await usr.can('data.write');if(c===false)canWrite=false;}catch(e){}}
+  applyWrite();
+  const perUser={},subs={};
+  const rebuild=()=>{histDocs=[].concat(...Object.values(perUser)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));renderHist();};
+  db.collection('teamcalcs').onSnapshot(snap=>{
+    snap.docs.forEach(u=>{
+      if(subs[u.id]||Object.keys(subs).length>=60)return;
+      subs[u.id]=db.collection('teamcalcs/'+u.id+'/items').orderBy('updatedAt','desc').limit(300).onSnapshot(s=>{
+        perUser[u.id]=s.docs.map(x=>Object.assign({},x.data(),{id:x.id,owner:u.id}));rebuild();
+      },()=>{delete subs[u.id];});
+    });
+    histState='ready';rebuild();
+  },()=>{histState='error';renderHist();});
+})();
+fill();update(true);
+if(location.hash==='#history')showTab('history');
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
