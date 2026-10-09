@@ -21,7 +21,7 @@
 :root{
   --bg:#EEF1F4; --panel:#FFFFFF; --ink:#15202B; --muted:#5A6672; --line:#D5DCE3; --grid:#E4E9EE; --night:#E6EBF1;
   --sun:#CF8306; --sun-soft:#F5DDAA; --batt:#0E7562; --batt-soft:#BFE3D9; --warn:#B93D0B; --warn-soft:#FBE3D6; --ok:#0E7562; --ok-soft:#D4EEE7;
-  --field:#F7F9FA; --ceb:#CDD4DC;
+  --field:#F7F9FA; --ceb:#CDD4DC; --offp:#55658A;
   --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -29,11 +29,11 @@
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#0E141A; --panel:#161F28; --ink:#E4EAF0; --muted:#94A1AD; --line:#2B3743; --grid:#22303C; --night:#131C25;
   --sun:#F0A63A; --sun-soft:#4D3814; --batt:#3FC4A5; --batt-soft:#14423A; --warn:#F2814F; --warn-soft:#46241A; --ok:#3FC4A5; --ok-soft:#173A33;
-  --field:#1C2731; --ceb:#35424F; color-scheme:dark; } }
+  --field:#1C2731; --ceb:#35424F; --offp:#8E9FC4; color-scheme:dark; } }
 :root[data-theme="dark"]{
   --bg:#0E141A; --panel:#161F28; --ink:#E4EAF0; --muted:#94A1AD; --line:#2B3743; --grid:#22303C; --night:#131C25;
   --sun:#F0A63A; --sun-soft:#4D3814; --batt:#3FC4A5; --batt-soft:#14423A; --warn:#F2814F; --warn-soft:#46241A; --ok:#3FC4A5; --ok-soft:#173A33;
-  --field:#1C2731; --ceb:#35424F; color-scheme:dark; }
+  --field:#1C2731; --ceb:#35424F; --offp:#8E9FC4; color-scheme:dark; }
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -90,6 +90,49 @@ button:disabled{opacity:.6;cursor:progress}
 .hitem.cur{border-color:var(--ink)}
 button.danger{color:var(--warn)}
 button.danger.solid{background:var(--warn);color:var(--panel);border-color:var(--warn)}
+.est{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:24px;align-items:start}
+@media (max-width:1000px){.est{grid-template-columns:minmax(0,1fr)}}
+.est-main{display:grid;gap:16px;min-width:0}
+@media (min-width:1001px){.est-sum{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto}}
+.egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 14px;margin-top:12px}
+.fld{display:grid;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.fld input,.fld select{width:100%;font:inherit;font-family:var(--f-mono);font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:5px;padding:6px 8px}
+.fld input[type=text]{font-family:var(--f-body)}
+.fld.grow{flex:1 1 200px}.fld.w-xs{width:78px}.fld.w-s{width:100px}.fld.w-m{width:140px}.fld.w-t{width:112px}
+.addbar{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+button.sm{font-size:13px;padding:6px 10px}
+details.lh{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+details.lh summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:15px}
+.lhgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px;margin:10px 0}
+.lhbox{border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:8px;align-content:start;justify-items:start}
+.lhead{display:flex;align-items:baseline;gap:10px}.lhead h2{font-family:var(--f-display);font-weight:600;font-size:20px;margin:0}
+.llist{display:grid;gap:10px}
+.lcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:8px}
+.lrow{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+.lacts{display:flex;gap:6px}
+.lres{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+.lres b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+.lres .pd b{color:var(--sun)}.lres .pp b{color:var(--warn)}.lres .po b{color:var(--offp)}
+.etiles{display:grid;gap:6px;margin-bottom:10px}
+#estChart svg{min-width:0}
+.etile{border:1px solid var(--line);border-radius:8px;padding:7px 10px;border-left:4px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:baseline}
+.etile.pd{border-left-color:var(--sun)}.etile.pp{border-left-color:var(--warn)}.etile.po{border-left-color:var(--offp)}
+.etile .k{grid-row:1/3}
+.etile .k{font-size:12.5px;font-weight:600}.etile .k small{display:block;font-weight:400;color:var(--muted);font-family:var(--f-mono);font-size:11px}
+.etile .v{font-family:var(--f-display);font-weight:700;font-size:22px;line-height:1.1;text-align:right;font-variant-numeric:tabular-nums}
+.etile .v small{font-family:var(--f-body);font-size:11px;font-weight:400;color:var(--muted)}
+.etile .m{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);text-align:right}
+.efacts{display:grid;margin-top:10px}
+.erow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.erow span{color:var(--muted)}.erow b{font-family:var(--f-mono);font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.warnhint{color:var(--warn);margin-top:8px}
+.eapply{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:grid;gap:8px}
+.chk2{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer}
+.chk2 input{accent-color:var(--ink);width:16px;height:16px}
+svg .pday{fill:var(--sun)}svg .ppeak{fill:var(--warn)}svg .poff{fill:var(--offp)}
+svg .dline{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-dasharray:5 3}
+.estnote{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:12.5px;color:var(--batt);background:var(--ok-soft);border-radius:6px;padding:6px 10px}
+.estnote button{font-size:12.5px;padding:3px 8px}
 .empty{background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:28px 20px;text-align:center;color:var(--muted)}
 input[aria-invalid=true]{border-color:var(--warn);background:var(--warn-soft)}
 .seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:6px;overflow:hidden}
@@ -212,8 +255,103 @@ tr.short td{color:var(--muted)}
 
   <nav class="tabs" role="tablist" aria-label="Views">
     <button type="button" role="tab" id="tabCalc" aria-selected="true" aria-controls="calcView">Calculator</button>
+    <button type="button" role="tab" id="tabEst" aria-selected="false" aria-controls="estView">Load estimator</button>
     <button type="button" role="tab" id="tabHist" aria-selected="false" aria-controls="histView">History<span class="cnt" id="histCount"></span></button>
   </nav>
+
+  <section id="estView" role="tabpanel" aria-labelledby="tabEst" hidden>
+    <div class="est">
+      <div class="est-main">
+        <section class="card">
+          <h2>Site and assumptions</h2>
+          <p class="lead">List the site's loads below. The estimator splits each load's hours into the Day, Peak and Off-peak periods to work out the units, then sends them to the calculator.</p>
+          <div class="seg seg3" role="group" aria-label="Site type" style="max-width:420px">
+            <button type="button" id="eType_home" aria-pressed="true">Home</button>
+            <button type="button" id="eType_office" aria-pressed="false">Office</button>
+            <button type="button" id="eType_factory" aria-pressed="false">Factory</button>
+          </div>
+          <div class="egrid">
+            <label class="fld" for="eDays"><span>Operating days / month</span><input type="number" id="eDays" min="1" max="31" step="1"></label>
+            <label class="fld" for="ePhase"><span>Supply</span><select id="ePhase"><option value="3">3-phase, 400 V</option><option value="1">1-phase, 230 V</option></select></label>
+            <label class="fld" for="eEer"><span>AC efficiency (EER, BTU/Wh)</span><input type="number" id="eEer" min="5" max="25" step="0.5"></label>
+            <label class="fld" for="eMotor"><span>Motor efficiency</span><input type="number" id="eMotor" min="0.5" max="1" step="0.01"></label>
+            <label class="fld" for="eDiv"><span>Diversity factor (max demand)</span><input type="number" id="eDiv" min="0.1" max="1" step="0.05"></label>
+            <label class="fld" for="eBill"><span>Bill units to compare (optional)</span><input type="number" id="eBill" min="0" step="1" placeholder="kWh/month"></label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Add loads</h2>
+          <div class="addbar">
+            <label class="fld grow" for="presetSel"><span>Common items</span><select id="presetSel"></select></label>
+            <button type="button" id="presetAdd" class="primary">Add item</button>
+            <button type="button" id="typicalAdd">Add typical set</button>
+            <button type="button" id="blankAdd">Add blank load</button>
+            <button type="button" id="clearLoads" class="danger">Clear all</button>
+          </div>
+          <details class="lh">
+            <summary>Lighting helper</summary>
+            <div class="lhgrid">
+              <div class="lhbox">
+                <p class="gh">Lights by room count</p>
+                <div class="lrow">
+                  <label class="fld w-xs" for="lhRooms"><span>Rooms</span><input type="number" id="lhRooms" min="0" step="1" value="4"></label>
+                  <label class="fld w-xs" for="lhPer"><span>Lights / room</span><input type="number" id="lhPer" min="0" step="1" value="2"></label>
+                  <label class="fld w-xs" for="lhW"><span>Lamp W</span><input type="number" id="lhW" min="0" step="1" value="9"></label>
+                  <label class="fld w-t" for="lhRoomOn"><span>On</span><input type="time" id="lhRoomOn"></label>
+                  <label class="fld w-t" for="lhRoomOff"><span>Off</span><input type="time" id="lhRoomOff"></label>
+                </div>
+                <button type="button" id="lhRoomAdd" class="sm">Add room lights</button>
+              </div>
+              <div class="lhbox">
+                <p class="gh">Lights by floor area</p>
+                <div class="lrow">
+                  <label class="fld w-s" for="lhArea"><span>Floor area m²</span><input type="number" id="lhArea" min="0" step="1" value="100"></label>
+                  <label class="fld w-xs" for="lhWpm"><span>W per m²</span><input type="number" id="lhWpm" min="0" step="0.5" value="8"></label>
+                  <label class="fld w-t" for="lhAreaOn"><span>On</span><input type="time" id="lhAreaOn" value="08:00"></label>
+                  <label class="fld w-t" for="lhAreaOff"><span>Off</span><input type="time" id="lhAreaOff" value="17:00"></label>
+                </div>
+                <button type="button" id="lhAreaAdd" class="sm">Add area lighting</button>
+              </div>
+              <div class="lhbox">
+                <p class="gh">Outdoor / security lights</p>
+                <div class="lrow">
+                  <label class="fld w-xs" for="lhOut"><span>Lights</span><input type="number" id="lhOut" min="0" step="1" value="4"></label>
+                  <label class="fld w-xs" for="lhOutW"><span>Lamp W</span><input type="number" id="lhOutW" min="0" step="1" value="15"></label>
+                  <label class="fld w-t" for="lhOutOn"><span>On</span><input type="time" id="lhOutOn" value="18:30"></label>
+                  <label class="fld w-t" for="lhOutOff"><span>Off</span><input type="time" id="lhOutOff" value="05:30"></label>
+                </div>
+                <button type="button" id="lhOutAdd" class="sm">Add outdoor lights</button>
+              </div>
+            </div>
+            <p class="hint">Typical LED lighting: homes 3–5 W/m², offices 6–10 W/m², factories 5–8 W/m².</p>
+          </details>
+        </section>
+
+        <div class="lhead"><h2>Loads</h2><span id="loadCount" class="hint"></span></div>
+        <p class="hint" style="margin:-6px 0 10px">Duty % is the share of the on-time a load actually draws power (fridge or AC compressor cycling). Same on and off time means 24 hours. Use the 2nd on/off for a second shift or evening use.</p>
+        <div id="loadList" class="llist"></div>
+      </div>
+
+      <aside class="est-sum card" aria-label="Load estimate summary">
+        <h2>Estimated units</h2>
+        <p class="lead" style="margin-bottom:12px">Per operating day, and per month using each load's days per month.</p>
+        <div class="etiles" id="eTiles"></div>
+        <div class="chart" id="estChart"></div>
+        <div class="legend"><span><i style="background:var(--sun)"></i>Day</span><span><i style="background:var(--warn)"></i>Peak</span><span><i style="background:var(--offp)"></i>Off-peak</span><span><i class="line" style="background:var(--ink)"></i>Max demand (diversified)</span></div>
+        <div class="efacts" id="eFacts"></div>
+        <p class="hint warnhint" id="eBillNote" hidden></p>
+        <div class="eapply">
+          <p class="gh">Send to calculator</p>
+          <label class="chk2" for="eSizeOp"><input type="radio" name="eSize" id="eSizeOp"> Size for an operating day (safer)</label>
+          <label class="chk2" for="eSizeAvg"><input type="radio" name="eSize" id="eSizeAvg"> Size for the monthly average</label>
+          <label class="chk2" for="eSendPcs"><input type="checkbox" id="eSendPcs"> Also send max demand to PCS sizing</label>
+          <p class="hint" id="eApplyVals"></p>
+          <button type="button" id="estApply" class="primary" style="width:100%">Use in calculator</button>
+        </div>
+      </aside>
+    </div>
+  </section>
 
   <section id="histView" role="tabpanel" aria-labelledby="tabHist" hidden>
     <div class="hist-tools">
@@ -233,6 +371,7 @@ tr.short td{color:var(--muted)}
           <button type="button" id="modeTou" aria-pressed="true">TOU tariff</button>
           <button type="button" id="modeFlat" aria-pressed="false">Non-TOU</button>
         </div>
+        <div class="estnote" id="estNote" hidden><span id="estNoteTxt">Units from the Load estimator</span><button type="button" id="estEdit">Edit loads</button></div>
         <div id="touRows" class="grp" style="padding-top:4px">
           <div class="row"><label for="peak">Peak units<small>18:30–22:30 · 4 h</small></label><input type="number" id="peak" min="0" step="1"><span class="u">kWh/mo</span></div>
           <div class="row"><label for="day">Day units<small>05:30–18:30 · 13 h</small></label><input type="number" id="day" min="0" step="1"><span class="u">kWh/mo</span></div>
@@ -434,7 +573,7 @@ tr.short td{color:var(--muted)}
 (function(){
 const HRS=['6–7','7–8','8–9','9–10','10–11','11–12','12–1','1–2','2–3','3–4','4–5','5–6'];
 const DEFAULTS={mode:'tou',peak:424,day:1350,off:485,monthly:2259,dayShare:60,days:30,minYield:3.25,avgMonthly:107,dod:90,eff:100,moduleW:585,batUnit:5,
-  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',cebOn:false,scen:'all',pvMargin:15,bessMargin:15,pcsBasis:'units',phase:'3',maxAmp:0,maxKva:0,loadPf:0.8,pcsMargin:20,dcac:1.2,batC:0.5,project:'',site:'',preparedBy:'',refNo:''};
+  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',cebOn:false,scen:'all',pvMargin:15,bessMargin:15,pcsBasis:'units',phase:'3',maxAmp:0,maxKva:0,loadPf:0.8,pcsMargin:20,dcac:1.2,batC:0.5,project:'',site:'',preparedBy:'',refNo:'',loads:[],est:{type:'home',days:30,phase:'3',eer:11,motorEff:0.85,div:0.8,sizeFor:'op',bill:0,sendPcs:true,appliedSig:''}};
 const TEXT_KEYS=['project','site','preparedBy','refNo'];
 const NUM_KEYS=['peak','day','off','monthly','dayShare','days','minYield','avgMonthly','dod','eff','moduleW','batUnit','kva','pf','loadPct','maxAmp','maxKva','loadPf','pcsMargin','pvMargin','bessMargin','batC','dcac'];
 const SC_L={all:'Day, Peak & Off-peak',daypeak:'Day & Peak',peak:'Peak only'};
@@ -467,6 +606,7 @@ function fill(){
   setBasis(state.pcsBasis,true);
   setScen(state.scen,true);
   setMode(state.mode,true);
+  renderEstAll();
 }
 function setMode(m,silent){
   state.mode=m;
@@ -543,6 +683,7 @@ let model=null;
 function update(resetSel){
   readInputs();save();
   const s=state,b=base(s);
+  {const ap=estApplied();$('estNote').hidden=!ap;if(ap)$('estNoteTxt').textContent=`Units from the Load estimator (${state.loads.length} loads, ${TYPE_L[state.est.type].toLowerCase()})`;}
   const err=$('errBox');
   $('profSum').textContent='Clear-day total '+fmt(b.psum,2)+' kWh per kWp';
   let msg='';
@@ -880,6 +1021,7 @@ $('copyBtn').addEventListener('click',()=>{
     `Still from CEB: ${fmt(b.gridD,1)} kWh/day`,
   ];
   const pc=pcsData(s,model);
+  if(estApplied()){const ec=estCalc();t.push(`Units from load estimate: ${ec.rows.length} loads, ${fmt(ec.totD,1)} kWh per operating day, max demand ${fmt(ec.mdKva,1)} kVA`);}
   if(pc)t.push(pc.copy);
   if(s.cebOn){const cd=cebData(b,s,Pp);t.push(`CEB connection check: ${cd.status}`);}
   const tt=t.join('\n');
@@ -1067,6 +1209,22 @@ async function buildReport(){
     rowTable(d.rows.map(r=>[r[0],r[1],r[2],'']).concat([['Result','Total minimum energy cover vs site daily consumption',d.status,'',1]]),false);
   }
 
+  // load estimate
+  if(estApplied()){
+    const ec=estCalc(),e=state.est;
+    H('Load estimate',30);
+    pairs([['Site type',TYPE_L[e.type]],['Loads listed',String(ec.rows.length)],['Connected load',fmt(ec.connKw,2)+' kW'],['Max demand',`${fmt(ec.mdKw,1)} kW · ${fmt(ec.mdKva,1)} kVA · ${fmt(ec.mdA,1)} A`],
+      ['Units per operating day',fmt(ec.totD,1)+' kWh'],['Estimated monthly units',fmt(ec.totM,0)+' kWh'],['Sized for',e.sizeFor==='avg'?'Monthly average':'Operating day'],['Diversity factor',fmt(ec.div,2)]]);
+    y+=2;
+    const cols=[['Load',58,'l'],['Qty',12,'r'],['kW each',20,'r'],['On times',42,'l'],['Peak',15,'r'],['Day',15,'r'],['Off-peak',16,'r']];
+    const head=()=>{let x=M;cols.forEach(c=>{pdf.text(c[0].toUpperCase(),c[2]==='r'?x+c[1]-2:x+1.5,y+4,{size:6.6,bold:true,color:K.muted,align:c[2]==='r'?'right':'left'});x+=c[1];});y+=6;pdf.line(M,y,M+CW,y,K.line,0.3);};
+    ensure(20);pdf.text('kWh per operating day',M+CW,y-1,{size:6.8,color:K.muted,align:'right'});head();
+    const cell=(vals,bold)=>{let x=M;cols.forEach((c,i)=>{pdf.text(vals[i],c[2]==='r'?x+c[1]-2:x+1.5,y+4,{size:7.8,bold,align:c[2]==='r'?'right':'left',maxW:c[1]-3});x+=c[1];});y+=5.6;pdf.line(M,y,M+CW,y,K.line,0.2);};
+    ec.rows.forEach((x,i)=>{if(y+5.6>BOT){pdf.addPage();y=M;head();}const r=state.loads[i];
+      cell([`${r.name}${x.duty<1?` (${fmt(x.duty*100,0)} %)`:''}`,fmt(x.q,0),fmt(x.kwEach,x.kwEach<1?3:2),winTxt(r),fmt(x.kwh.peak,2),fmt(x.kwh.day,2),fmt(x.kwh.off,2)],false);});
+    ensure(6);cell(['Total','','','',fmt(ec.daily.peak,1),fmt(ec.daily.day,1),fmt(ec.daily.off,1)],true);
+  }
+
   // notes
   H('Model notes',30);
   [SC_NOTE[b.scen],
@@ -1124,10 +1282,13 @@ function errText(e,verb){const c=e&&e.code;
   if(c==='revoked'||c==='not_granted'||c==='capability_disabled')return 'Team history is not available in this view.';
   return 'Could not '+verb+'. Check your connection and try again.';}
 
-function showTab(t){const h=t==='history';$('calcView').hidden=h;$('histView').hidden=!h;
-  $('tabCalc').setAttribute('aria-selected',String(!h));$('tabHist').setAttribute('aria-selected',String(h));if(h)renderHist();}
+function showTab(t){const v=t==='history'?'history':t==='est'?'est':'calc';
+  $('calcView').hidden=v!=='calc';$('estView').hidden=v!=='est';$('histView').hidden=v!=='history';
+  $('tabCalc').setAttribute('aria-selected',String(v==='calc'));$('tabEst').setAttribute('aria-selected',String(v==='est'));$('tabHist').setAttribute('aria-selected',String(v==='history'));
+  if(v==='history')renderHist();if(v==='est')updateEst();}
 $('tabCalc').addEventListener('click',()=>showTab('calc'));
 $('tabHist').addEventListener('click',()=>showTab('history'));
+$('tabEst').addEventListener('click',()=>showTab('est'));
 $('histSearch').addEventListener('input',()=>renderHist());
 
 async function renderHist(){
@@ -1294,8 +1455,280 @@ $('rsFile').addEventListener('change',async e=>{
     histState='ready';rebuild();
   },()=>{histState='error';renderHist();});
 })();
+// ---------- load estimator ----------
+const TYPE_DAYS={home:30,office:22,factory:26};
+const TYPE_L={home:'Home',office:'Office',factory:'Factory'};
+const UNITS=[['W','W'],['kW','kW'],['A1','A · 1-phase'],['A3','A · 3-phase'],['BTU','BTU/h (AC)'],['HP','HP (motor)']];
+const PER={day:[[330,1110]],peak:[[1110,1350]],off:[[1350,1440],[0,330]]};
+const H24=[['00:00','00:00']];
+// name, value, unit, pf, duty %, on-times, all30 = runs every day of the month
+const PRESETS=[
+  ['Home','LED bulb',9,'W',0.9,100,[['18:00','23:00']]],
+  ['Home','LED tube light',18,'W',0.9,100,[['18:00','23:00']]],
+  ['Home','Ceiling fan',75,'W',0.9,100,[['12:00','16:00'],['21:00','06:00']]],
+  ['Home','Table / pedestal fan',55,'W',0.9,100,[['13:00','16:00']]],
+  ['Home','Refrigerator',150,'W',0.85,40,H24,1],
+  ['Home','Chest freezer',200,'W',0.85,40,H24,1],
+  ['Home','LED TV',100,'W',0.95,100,[['18:00','23:00']]],
+  ['Home','Wi-Fi router',15,'W',0.9,100,H24,1],
+  ['Home','Laptop',65,'W',0.95,100,[['19:00','23:00']]],
+  ['Home','Desktop computer',150,'W',0.95,100,[['19:00','23:00']]],
+  ['Home','Washing machine',500,'W',0.8,60,[['08:00','10:00']]],
+  ['Home','Clothes iron',1000,'W',1,50,[['06:00','06:30']]],
+  ['Home','Rice cooker',700,'W',1,60,[['06:00','07:00'],['18:00','19:00']]],
+  ['Home','Electric kettle',1500,'W',1,100,[['06:00','06:15'],['18:00','18:15']]],
+  ['Home','Microwave oven',1200,'W',0.95,100,[['07:00','07:15'],['19:00','19:15']]],
+  ['Home','Induction cooker',2000,'W',0.95,70,[['11:00','12:00'],['18:30','19:30']]],
+  ['Home','Water heater (geyser)',3000,'W',1,50,[['05:30','06:30']]],
+  ['Home','Water pump',1,'HP',0.8,100,[['06:00','06:30'],['17:00','17:30']]],
+  ['Home','Split AC 9,000 BTU',9000,'BTU',0.9,70,[['21:00','06:00']]],
+  ['Home','Split AC 12,000 BTU',12000,'BTU',0.9,70,[['21:00','06:00']]],
+  ['Home','Split AC 18,000 BTU',18000,'BTU',0.9,70,[['21:00','06:00']]],
+  ['Home','Split AC 24,000 BTU',24000,'BTU',0.9,70,[['21:00','06:00']]],
+  ['Home','CCTV system',60,'W',0.9,100,H24,1],
+  ['Home','Outdoor light',15,'W',0.9,100,[['18:30','05:30']],1],
+  ['Office','LED panel light',36,'W',0.95,100,[['08:00','17:00']]],
+  ['Office','Desktop computer',150,'W',0.95,100,[['08:30','17:00']]],
+  ['Office','Laptop',65,'W',0.95,100,[['08:30','17:00']]],
+  ['Office','Monitor',30,'W',0.95,100,[['08:30','17:00']]],
+  ['Office','Laser printer',400,'W',0.9,10,[['08:30','17:00']]],
+  ['Office','Photocopier',1500,'W',0.9,15,[['08:30','17:00']]],
+  ['Office','Server / rack',1000,'W',0.95,100,H24,1],
+  ['Office','Network switch and Wi-Fi',60,'W',0.9,100,H24,1],
+  ['Office','Split AC 24,000 BTU',24000,'BTU',0.9,75,[['08:30','17:00']]],
+  ['Office','Cassette AC 36,000 BTU',36000,'BTU',0.9,75,[['08:30','17:00']]],
+  ['Office','Ducted AC 60,000 BTU',60000,'BTU',0.9,75,[['08:30','17:00']]],
+  ['Office','Water dispenser',500,'W',1,30,[['08:00','17:00']]],
+  ['Office','Refrigerator',150,'W',0.85,40,H24,1],
+  ['Office','Microwave oven',1200,'W',0.95,100,[['12:00','12:30']]],
+  ['Office','Coffee machine',1500,'W',1,20,[['08:00','17:00']]],
+  ['Office','Lift / elevator',7.5,'kW',0.85,15,[['07:30','18:00']]],
+  ['Office','CCTV system',100,'W',0.9,100,H24,1],
+  ['Office','Night / security light',50,'W',0.9,100,[['18:30','05:30']],1],
+  ['Factory','Induction motor 5 HP',5,'HP',0.85,80,[['08:00','17:00']]],
+  ['Factory','Induction motor 10 HP',10,'HP',0.85,80,[['08:00','17:00']]],
+  ['Factory','Machine by current (3-phase)',10,'A3',0.85,80,[['08:00','17:00']]],
+  ['Factory','Machine by current (1-phase)',10,'A1',0.85,80,[['08:00','17:00']]],
+  ['Factory','Air compressor',7.5,'kW',0.85,60,[['08:00','17:00']]],
+  ['Factory','Welding machine (3-phase)',20,'A3',0.7,30,[['08:00','17:00']]],
+  ['Factory','Water pump 3 HP',3,'HP',0.85,50,[['07:00','17:00']]],
+  ['Factory','Conveyor',2.2,'kW',0.85,90,[['08:00','17:00']]],
+  ['Factory','Lathe',5.5,'kW',0.85,40,[['08:00','17:00']]],
+  ['Factory','Grinder',1.5,'kW',0.85,30,[['08:00','17:00']]],
+  ['Factory','Exhaust fan',0.37,'kW',0.8,100,[['08:00','17:00']]],
+  ['Factory','Industrial fan',0.75,'kW',0.8,100,[['08:00','17:00']]],
+  ['Factory','High-bay LED',150,'W',0.95,100,[['08:00','17:00']]],
+  ['Factory','Cold room',5,'kW',0.85,60,H24,1],
+  ['Factory','Office AC 24,000 BTU',24000,'BTU',0.9,75,[['08:30','17:00']]],
+];
+const TYPICAL={
+  home:[['LED bulb',8],['Ceiling fan',3],['Refrigerator',1],['LED TV',1],['Wi-Fi router',1],['Washing machine',1],['Clothes iron',1],['Rice cooker',1],['Electric kettle',1],['Water pump',1],['Split AC 12,000 BTU',1],['Outdoor light',2]],
+  office:[['LED panel light',20],['Desktop computer',10],['Monitor',10],['Laser printer',1],['Photocopier',1],['Server / rack',1],['Network switch and Wi-Fi',1],['Split AC 24,000 BTU',4],['Water dispenser',1],['Refrigerator',1],['CCTV system',1],['Night / security light',4]],
+  factory:[['Induction motor 5 HP',4],['Air compressor',1],['Water pump 3 HP',1],['Conveyor',2],['Lathe',2],['Grinder',2],['Exhaust fan',4],['High-bay LED',12],['Office AC 24,000 BTU',1]],
+};
+
+function ensureEst(){
+  if(!state.est||state.est===DEFAULTS.est)state.est=JSON.parse(JSON.stringify(DEFAULTS.est));
+  if(!Array.isArray(state.loads)||state.loads===DEFAULTS.loads)state.loads=Array.isArray(state.loads)?JSON.parse(JSON.stringify(state.loads)):[];
+  state.loads.forEach(r=>{if(!Array.isArray(r.w))r.w=[];while(r.w.length<2)r.w.push(['','']);});
+  return state.est;
+}
+const tmin=t=>{if(typeof t!=='string'||!/^\d{1,2}:\d{2}/.test(t))return null;const [h,m]=t.split(':').map(Number);return Math.min(h,24)*60+m;};
+function intervals(w){
+  const out=[];(w||[]).forEach(p=>{const s=tmin(p&&p[0]),e=tmin(p&&p[1]);if(s==null||e==null)return;
+    if(s===e){out.push([0,1440]);return;}
+    if(e>s)out.push([s,e]);else{out.push([s,1440]);if(e>0)out.push([0,e]);}});
+  return out;
+}
+const ovl=(a,b)=>Math.max(0,Math.min(a[1],b[1])-Math.max(a[0],b[0]));
+function hoursIn(ints,per){let m=0;ints.forEach(i=>PER[per].forEach(p=>{m+=ovl(i,p);}));return m/60;}
+function rowCalc(r,e){
+  const q=Math.max(+r.qty||0,0),v=Math.max(+r.val||0,0),pf=Math.min(Math.max(+r.pf||1,0.1),1),duty=Math.min(Math.max(+r.duty||0,0),100)/100;
+  let w;
+  switch(r.unit){case 'kW':w=v*1000;break;case 'A1':w=230*v*pf;break;case 'A3':w=Math.sqrt(3)*400*v*pf;break;
+    case 'BTU':w=v/(e.eer>0?e.eer:11);break;case 'HP':w=v*746/(e.motorEff>0?e.motorEff:0.85);break;default:w=v;}
+  const ints=intervals(r.w),h={day:hoursIn(ints,'day'),peak:hoursIn(ints,'peak'),off:hoursIn(ints,'off')};
+  const runKw=w/1000*q*duty,kwh={day:runKw*h.day,peak:runKw*h.peak,off:runKw*h.off};
+  const days=Math.min(Math.max(+r.days||0,0),31);
+  return {kwEach:w/1000,kvaEach:w/pf/1000,q,duty,pf,ints,h,hours:h.day+h.peak+h.off,runKw,conKw:w/1000*q,conKva:w/pf/1000*q,kwh,daily:kwh.day+kwh.peak+kwh.off,days,
+    monthly:{day:kwh.day*days,peak:kwh.peak*days,off:kwh.off*days}};
+}
+function estCalc(){
+  const e=ensureEst(),rows=state.loads.map(r=>rowCalc(r,e));
+  const daily={day:0,peak:0,off:0},monthly={day:0,peak:0,off:0},apply={day:0,peak:0,off:0};
+  const calcDays=Math.max(+state.days||30,1);
+  rows.forEach(x=>{for(const k in daily){daily[k]+=x.kwh[k];monthly[k]+=x.monthly[k];apply[k]+=x.kwh[k]*(e.sizeFor==='avg'?x.days:calcDays);}});
+  const avg=[],dem=[],demKva=[];
+  for(let i=0;i<48;i++){const t=i*30+15;let a=0,d=0,dk=0;
+    rows.forEach(x=>{if(x.ints.some(iv=>t>=iv[0]&&t<iv[1])){a+=x.runKw;d+=x.conKw;dk+=x.conKva;}});avg.push(a);dem.push(d);demKva.push(dk);}
+  const div=Math.min(Math.max(+e.div||1,0.1),1);
+  const mdKva=Math.max(0,...demKva)*div,mdKw=Math.max(0,...dem)*div,one=e.phase==='1';
+  const mdA=mdKva*1000/(one?230:Math.sqrt(3)*400);
+  const iMax=demKva.indexOf(Math.max(...demKva));
+  return {rows,daily,monthly,apply,avg,dem,div,mdKva,mdKw,mdA,one,mdAt:iMax>=0?iMax*30:0,
+    connKw:rows.reduce((a,x)=>a+x.conKw,0),totD:daily.day+daily.peak+daily.off,totM:monthly.day+monthly.peak+monthly.off};
+}
+const hhmm=m=>String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+const winTxt=r=>(r.w||[]).filter(p=>p&&p[0]&&p[1]).map(p=>p[0]===p[1]?'24 h':`${p[0]}–${p[1]}`).join(', ')||'–';
+function estApplied(){
+  const e=state.est;
+  return !!(e&&e.appliedSig&&state.mode==='tou'&&Array.isArray(state.loads)&&state.loads.length&&e.appliedSig===`${state.peak}|${state.day}|${state.off}`);
+}
+
+// --- UI ---
+function eFld(label,type,key,val,cls,attrs,i){
+  const id=`ld${i}_${key}`,w=elx('label','fld '+(cls||''));w.htmlFor=id;w.appendChild(elx('span',null,label));
+  const inp=document.createElement('input');inp.type=type;inp.id=id;inp.dataset.k=key;inp.value=val==null?'':val;
+  Object.entries(attrs||{}).forEach(([k,v])=>inp.setAttribute(k,v));w.appendChild(inp);return w;
+}
+function eSel(label,key,val,opts,cls,i){
+  const id=`ld${i}_${key}`,w=elx('label','fld '+(cls||''));w.htmlFor=id;w.appendChild(elx('span',null,label));
+  const s=document.createElement('select');s.id=id;s.dataset.k=key;
+  opts.forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;s.appendChild(o);});s.value=val;w.appendChild(s);return w;
+}
+function loadCard(r,i){
+  const c=elx('article','lcard');c.dataset.i=i;
+  const top=elx('div','lrow');
+  top.append(eFld('Load','text','name',r.name,'grow',{maxlength:60},i),eFld('Qty','number','qty',r.qty,'w-xs',{min:0,step:1},i));
+  const acts=elx('div','lacts');
+  const cp=elx('button','sm','Copy');cp.type='button';cp.dataset.act='copy';
+  const del=elx('button','sm danger','Remove');del.type='button';del.dataset.act='del';
+  acts.append(cp,del);top.appendChild(acts);
+  const mid=elx('div','lrow');
+  mid.append(eFld('Rating','number','val',r.val,'w-s',{min:0,step:'any'},i),eSel('Unit','unit',r.unit,UNITS,'w-m',i),
+    eFld('PF','number','pf',r.pf,'w-xs',{min:0.1,max:1,step:0.01},i),eFld('Duty %','number','duty',r.duty,'w-xs',{min:0,max:100,step:5},i),
+    eFld('Days / month','number','days',r.days,'w-xs',{min:0,max:31,step:1},i));
+  const sch=elx('div','lrow');
+  sch.append(eFld('On','time','w0s',r.w[0][0],'w-t',{},i),eFld('Off','time','w0e',r.w[0][1],'w-t',{},i),
+    eFld('2nd on','time','w1s',r.w[1][0],'w-t',{},i),eFld('2nd off','time','w1e',r.w[1][1],'w-t',{},i));
+  const res=elx('div','lres');res.id='lres'+i;
+  c.append(top,mid,sch,res);
+  return c;
+}
+function renderLoads(){
+  ensureEst();
+  const list=$('loadList');list.textContent='';
+  if(!state.loads.length){list.appendChild(elx('div','empty','No loads yet. Add common items from the list, use the lighting helper, or add a typical set for this site type.'));}
+  state.loads.forEach((r,i)=>list.appendChild(loadCard(r,i)));
+  $('loadCount').textContent=state.loads.length?`${state.loads.length} load${state.loads.length===1?'':'s'}`:'';
+  updateEst();
+}
+function updateEst(){
+  const c=estCalc(),e=state.est;
+  c.rows.forEach((x,i)=>{const el=$('lres'+i);if(!el)return;
+    el.innerHTML=`<span><b>${fmt(x.kwEach,x.kwEach<1?3:2)}</b> kW each</span><span><b>${fmt(x.hours,1)}</b> h/day</span><span><b>${fmt(x.daily,2)}</b> kWh/day</span>`+
+      `<span class="pd">Day <b>${fmt(x.kwh.day,2)}</b></span><span class="pp">Peak <b>${fmt(x.kwh.peak,2)}</b></span><span class="po">Off-peak <b>${fmt(x.kwh.off,2)}</b></span>`;});
+  const d=c.daily,m=c.monthly,big=(v)=>fmt(v,v<100?1:0);
+  $('eTiles').innerHTML=[['pd','Day','05:30–18:30',d.day,m.day],['pp','Peak','18:30–22:30',d.peak,m.peak],['po','Off-peak','22:30–05:30',d.off,m.off]]
+    .map(t=>`<div class="etile ${t[0]}"><div class="k">${t[1]} <small>${t[2]}</small></div><div class="v">${big(t[3])} <small>kWh/day</small></div><div class="m">${fmt(t[4],0)} kWh/month</div></div>`).join('');
+  const bill=+e.bill||0,diff=bill>0&&c.totM>0?(c.totM-bill)/bill*100:NaN;
+  $('eFacts').innerHTML=[
+    ['Total per operating day',fmt(c.totD,1)+' kWh'],
+    ['Estimated monthly units',fmt(c.totM,0)+' kWh'],
+    ['Connected load',fmt(c.connKw,2)+' kW'],
+    ['Max demand (× '+fmt(c.div,2)+' diversity)',`${fmt(c.mdKw,1)} kW · ${fmt(c.mdKva,1)} kVA`],
+    ['Max demand current',`${fmt(c.mdA,1)} A ${c.one?'(1-phase)':'per phase'} at ${hhmm(c.mdAt)}`],
+    ...(bill>0?[['Compared with bill',`${fmt(bill,0)} kWh · ${isFinite(diff)?(diff>=0?'+':'')+fmt(diff,0)+' %':'–'}`]]:[]),
+  ].map(f=>`<div class="erow"><span>${f[0]}</span><b>${f[1]}</b></div>`).join('');
+  $('eBillNote').hidden=!(bill>0&&isFinite(diff)&&Math.abs(diff)>15);
+  if(!$('eBillNote').hidden)$('eBillNote').textContent=diff>0?'The estimate is more than 15 % above the bill. Check duty %, hours and days per month.':'The estimate is more than 15 % below the bill. Some loads may be missing, or hours may be too short.';
+  $('eApplyVals').textContent=c.totD>0?`Peak ${fmt(c.apply.peak,1)} · Day ${fmt(c.apply.day,1)} · Off-peak ${fmt(c.apply.off,1)} kWh/month`+(e.sendPcs&&c.mdKva>0?` · max demand ${fmt(c.mdKva,1)} kVA`:''):'Add loads to get the units';
+  $('estChart').innerHTML=estChartSvg(c);
+}
+function estChartSvg(c){
+  const W=560,H=230,L=40,R=12,T=22,B=34,pw=W-L-R,ph=H-T-B;
+  const top=Math.max(0.1,...c.avg,...c.dem.map(v=>v*c.div));
+  const ymax=niceCeil(top*1.1,4),X=h=>L+h/24*pw,Y=v=>T+ph-v/ymax*ph,bw=pw/48;
+  let o=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Estimated load over 24 hours">`;
+  ticks(ymax,4).forEach(v=>{o+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end">${fmt(v,v%1?1:0)}</text>`;});
+  c.avg.forEach((v,i)=>{const t=i*30+15,cls=t>=330&&t<1110?'pday':t>=1110&&t<1350?'ppeak':'poff';
+    if(v>0)o+=`<rect class="${cls}" x="${(X(i/2)+0.5).toFixed(1)}" y="${Y(v).toFixed(1)}" width="${(bw-1).toFixed(1)}" height="${(Y(0)-Y(v)).toFixed(1)}"><title>${hhmm(i*30)}–${hhmm(i*30+30)} avg ${fmt(v,2)} kW</title></rect>`;});
+  let d='';c.dem.forEach((v,i)=>{const y=Y(v*c.div).toFixed(1);d+=(i?`H${X(i/2).toFixed(1)}V`:`M${X(0)} `)+y;});d+=`H${X(24)}`;
+  o+=`<path class="dline" d="${d}"/>`;
+  [5.5,18.5,22.5].forEach(t=>{o+=`<line class="pb" x1="${X(t)}" x2="${X(t)}" y1="${T-4}" y2="${T+ph}"/>`;});
+  o+=`<text class="pl" x="${X(2.75)}" y="${T-8}" text-anchor="middle">Off-peak</text><text class="pl" x="${X(12)}" y="${T-8}" text-anchor="middle">Day</text><text class="pl" x="${X(20.5)}" y="${T-8}" text-anchor="middle">Peak</text>`;
+  o+=`<line class="ax" x1="${L}" x2="${W-R}" y1="${T+ph}" y2="${T+ph}"/>`;
+  for(let h=0;h<=24;h+=6)o+=`<text x="${X(h)}" y="${T+ph+15}" text-anchor="middle">${String(h).padStart(2,'0')}:00</text>`;
+  o+=`<text transform="translate(11 ${T+ph/2}) rotate(-90)" text-anchor="middle">kW</text></svg>`;
+  return o;
+}
+function renderEstSettings(){
+  const e=ensureEst();
+  ['eType_home','eType_office','eType_factory'].forEach(id=>$(id).setAttribute('aria-pressed',String(id==='eType_'+e.type)));
+  $('eDays').value=e.days;$('ePhase').value=e.phase;$('eEer').value=e.eer;$('eMotor').value=e.motorEff;$('eDiv').value=e.div;$('eBill').value=e.bill||'';
+  $('eSizeOp').checked=e.sizeFor!=='avg';$('eSizeAvg').checked=e.sizeFor==='avg';$('eSendPcs').checked=!!e.sendPcs;
+  const g=TYPE_L[e.type];
+  const sel=$('presetSel');sel.textContent='';
+  ['Home','Office','Factory'].sort((a,b)=>(a===g?-1:b===g?1:0)).forEach(grp=>{const og=document.createElement('optgroup');og.label=grp;
+    PRESETS.forEach((p,i)=>{if(p[0]!==grp)return;const o=document.createElement('option');o.value=i;o.textContent=`${p[1]} · ${p[2]} ${p[3]==='BTU'?'BTU/h':p[3]==='A1'||p[3]==='A3'?'A':p[3]}`;og.appendChild(o);});sel.appendChild(og);});
+  // lighting helper defaults by site type
+  const off=e.type==='home';
+  $('lhRoomOn').value=$('lhRoomOn').value||(off?'18:00':'08:00');$('lhRoomOff').value=$('lhRoomOff').value||(off?'23:00':'17:00');
+}
+function renderEstAll(){renderEstSettings();renderLoads();}
+function presetRow(p,qty){
+  const e=ensureEst();
+  return {name:p[1],qty:qty||1,val:p[2],unit:p[3],pf:p[4],duty:p[5],days:p[7]?30:e.days,w:[p[6][0].slice(),(p[6][1]||['','']).slice()]};
+}
+function addRows(rows){ensureEst();rows.forEach(r=>{while(r.w.length<2)r.w.push(['','']);state.loads.push(r);});save();renderLoads();}
+$('presetAdd').addEventListener('click',()=>{const p=PRESETS[+$('presetSel').value];if(p)addRows([presetRow(p,1)]);toast('Added '+p[1]);});
+$('blankAdd').addEventListener('click',()=>{const e=ensureEst();addRows([{name:'New load',qty:1,val:100,unit:'W',pf:0.9,duty:100,days:e.days,w:[['08:00','17:00'],['','']]}]);});
+$('typicalAdd').addEventListener('click',()=>{const e=ensureEst();const set=TYPICAL[e.type]||[];
+  addRows(set.map(([n,q])=>{const p=PRESETS.find(x=>x[0]===TYPE_L[e.type]&&x[1]===n)||PRESETS.find(x=>x[1]===n);return p?presetRow(p,q):null;}).filter(Boolean));toast(`Added a typical ${TYPE_L[e.type].toLowerCase()} set`);});
+let clearArm=null;
+$('clearLoads').addEventListener('click',()=>{const b=$('clearLoads');
+  if(!clearArm){b.textContent='Click again to clear all';b.classList.add('solid');clearArm=setTimeout(()=>{clearArm=null;b.textContent='Clear all';b.classList.remove('solid');},3000);return;}
+  clearTimeout(clearArm);clearArm=null;b.textContent='Clear all';b.classList.remove('solid');ensureEst();state.loads=[];state.est.appliedSig='';save();renderLoads();toast('All loads cleared');});
+$('lhRoomAdd').addEventListener('click',()=>{const e=ensureEst(),n=+$('lhRooms').value||0,per=+$('lhPer').value||0,w=+$('lhW').value||0;
+  if(!(n>0&&per>0&&w>0)){toast('Enter rooms, lights per room and lamp watts');return;}
+  addRows([{name:`Room lights (${n} rooms × ${per})`,qty:n*per,val:w,unit:'W',pf:0.9,duty:100,days:e.days,w:[[$('lhRoomOn').value||'18:00',$('lhRoomOff').value||'23:00'],['','']]}]);});
+$('lhAreaAdd').addEventListener('click',()=>{const e=ensureEst(),a=+$('lhArea').value||0,wpm=+$('lhWpm').value||0;
+  if(!(a>0&&wpm>0)){toast('Enter the floor area and watts per m²');return;}
+  addRows([{name:`Area lighting (${fmt(a,0)} m² × ${fmt(wpm,1)} W/m²)`,qty:1,val:+(a*wpm).toFixed(1),unit:'W',pf:0.95,duty:100,days:e.days,w:[[$('lhAreaOn').value||'08:00',$('lhAreaOff').value||'17:00'],['','']]}]);});
+$('lhOutAdd').addEventListener('click',()=>{const n=+$('lhOut').value||0,w=+$('lhOutW').value||0;
+  if(!(n>0&&w>0)){toast('Enter the number of lights and lamp watts');return;}
+  addRows([{name:'Outdoor / security lights',qty:n,val:w,unit:'W',pf:0.9,duty:100,days:30,w:[[$('lhOutOn').value||'18:30',$('lhOutOff').value||'05:30'],['','']]}]);});
+$('loadList').addEventListener('input',ev=>{
+  const inp=ev.target,card=inp.closest('.lcard');if(!card||!inp.dataset.k)return;
+  const r=state.loads[+card.dataset.i],k=inp.dataset.k;if(!r)return;
+  if(k==='name')r.name=inp.value;
+  else if(k==='unit')r.unit=inp.value;
+  else if(/^w\d[se]$/.test(k)){const wi=+k[1],se=k[2]==='s'?0:1;r.w[wi][se]=inp.value;}
+  else{const v=parseFloat(inp.value);r[k]=isFinite(v)?v:0;}
+  save();updateEst();
+});
+$('loadList').addEventListener('change',ev=>{if(ev.target.dataset.k==='unit'){const r=state.loads[+ev.target.closest('.lcard').dataset.i];if(r){r.unit=ev.target.value;save();updateEst();}}});
+$('loadList').addEventListener('click',ev=>{
+  const b=ev.target.closest('button[data-act]');if(!b)return;const i=+b.closest('.lcard').dataset.i;
+  if(b.dataset.act==='del'){state.loads.splice(i,1);save();renderLoads();}
+  else if(b.dataset.act==='copy'){const r=JSON.parse(JSON.stringify(state.loads[i]));r.name+=' (copy)';state.loads.splice(i+1,0,r);save();renderLoads();}
+});
+function estSetting(){
+  const e=ensureEst(),num=(id,def)=>{const v=parseFloat($(id).value);return isFinite(v)&&v>=0?v:def;};
+  const oldDays=e.days;
+  e.days=Math.min(num('eDays',30),31);e.phase=$('ePhase').value;e.eer=num('eEer',11)||11;e.motorEff=Math.min(num('eMotor',0.85)||0.85,1);
+  e.div=Math.min(num('eDiv',0.8)||0.8,1);e.bill=num('eBill',0);e.sizeFor=$('eSizeAvg').checked?'avg':'op';e.sendPcs=$('eSendPcs').checked;
+  if(e.days!==oldDays)state.loads.forEach(r=>{if(+r.days===oldDays)r.days=e.days;});
+  save();renderLoads();
+}
+['eDays','ePhase','eEer','eMotor','eDiv','eBill','eSizeOp','eSizeAvg','eSendPcs'].forEach(id=>$(id).addEventListener(id==='ePhase'||id.startsWith('eSize')||id==='eSendPcs'?'change':'input',estSetting));
+['home','office','factory'].forEach(t=>$('eType_'+t).addEventListener('click',()=>{const e=ensureEst(),old=e.days;e.type=t;e.days=TYPE_DAYS[t];
+  state.loads.forEach(r=>{if(+r.days===old)r.days=e.days;});$('lhRoomOn').value='';$('lhRoomOff').value='';save();renderEstAll();}));
+$('estApply').addEventListener('click',()=>{
+  const c=estCalc(),e=state.est;
+  if(!(c.totD>0)){toast('Add loads first');return;}
+  const r1=v=>Math.round(v*10)/10;
+  state.mode='tou';state.peak=r1(c.apply.peak);state.day=r1(c.apply.day);state.off=r1(c.apply.off);
+  if(e.sendPcs&&c.mdKva>0){state.pcsBasis='kva';state.maxKva=r1(c.mdKva);state.phase=e.phase;}
+  e.appliedSig=`${state.peak}|${state.day}|${state.off}`;
+  save();fill();update(true);showTab('calc');try{window.scrollTo(0,0);}catch(_){}
+  toast('Load estimate sent to the calculator');
+});
+$('estEdit').addEventListener('click',()=>{showTab('est');try{window.scrollTo(0,0);}catch(_){}});
+
 fill();update(true);
 if(location.hash==='#history')showTab('history');
+if(location.hash==='#loads')showTab('est');
 })();
 </script>
 
