@@ -163,6 +163,11 @@ details.more[open] summary{margin-bottom:10px}
 /* Results */
 .results{display:grid;gap:20px;min-width:0}
 .plates{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:16px}
+.plates.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:560px){.plates.four{grid-template-columns:minmax(0,1fr)}}
+.plate.inv .ph{background:var(--sun-soft)}
+.sub3{font-family:var(--f-display);font-weight:600;font-size:16px;margin:14px 0 4px}
+.cpbar .seg button{font-weight:600}
 @media (max-width:560px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .plate{background:var(--panel);border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
 .plate .ph{display:flex;justify-content:space-between;gap:8px;padding:7px 14px;font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
@@ -375,6 +380,15 @@ tr.short td{color:var(--muted)}
   <div class="app" id="calcView" role="tabpanel" aria-labelledby="tabCalc">
     <!-- INPUTS -->
     <form class="inputs" id="form" autocomplete="off" novalidate>
+      <div class="grp cpbar">
+        <p class="gh">System type</p>
+        <div class="seg" role="group" aria-label="System coupling">
+          <button type="button" id="cpDC" aria-pressed="true">DC coupling</button>
+          <button type="button" id="cpAC" aria-pressed="false">AC coupling</button>
+        </div>
+        <p class="hint" id="cpHint"></p>
+      </div>
+
       <div class="grp">
         <p class="gh">Electricity bill</p>
         <div class="seg" role="group" aria-label="Tariff type">
@@ -425,7 +439,7 @@ tr.short td{color:var(--muted)}
       </div>
 
       <div class="grp">
-        <p class="gh">PCS / inverter sizing</p>
+        <p class="gh" id="pcsGh">PCS / inverter sizing</p>
         <p class="hint" id="pcsHint"></p>
         <div class="grp" id="pcsPeakRows" style="padding-top:0">
           <div class="seg seg3" role="group" aria-label="Peak load taken from">
@@ -441,6 +455,8 @@ tr.short td{color:var(--muted)}
           <select id="phase"><option value="3">3-phase, 400 V</option><option value="1">1-phase, 230 V</option></select></div>
         <div class="row"><label for="batC">Battery max discharge<small>continuous, from datasheet</small></label><input type="number" id="batC" min="0.05" max="5" step="0.05"><span class="u">C</span></div>
         <div class="row"><label for="dcac">PV oversize ratio<small>PV kWp ÷ inverter kVA</small></label><input type="number" id="dcac" min="0.5" max="2" step="0.05"><span class="u">×</span></div>
+        <div class="row"><label for="maxPar">Max units in parallel<small>for combinations near the requirement</small></label><input type="number" id="maxPar" min="1" max="8" step="1"><span class="u">units</span></div>
+        <label class="chk2" for="mixPcs" style="font-size:13.5px"><input type="checkbox" id="mixPcs"> Allow mixed sizes in parallel for PCS / hybrid inverters</label>
         <div class="row" id="rowMg"><label for="pcsMargin">Design margin<small>on peak load</small></label><input type="number" id="pcsMargin" min="0" max="100" step="5"><span class="u">%</span></div>
       </div>
 
@@ -486,7 +502,7 @@ tr.short td{color:var(--muted)}
         <span class="bb"><button type="button" id="updBtn">Update saved entry</button><button type="button" id="closeBanner">Close</button></span>
       </div>
 
-      <section class="plates" aria-label="Main results">
+      <section class="plates" id="plates" aria-label="Main results">
         <div class="plate batt">
           <div class="ph"><span>Required BESS capacity</span><span>C41</span></div>
           <div class="pv"><span class="num" id="rBess">–</span><span class="unit">kWh</span></div>
@@ -499,8 +515,14 @@ tr.short td{color:var(--muted)}
           <div class="pd" id="rPvD">–</div>
           <div class="pick"><span id="rPvPickL">Recommended</span><b id="rPvPick">–</b></div>
         </div>
+        <div class="plate inv" id="pvInvPlate" hidden>
+          <div class="ph"><span>PV inverter rating</span><span>kVA</span></div>
+          <div class="pv"><span class="num" id="rInv">–</span><span class="unit">kVA</span></div>
+          <div class="pd" id="rInvD">–</div>
+          <div class="pick"><span>Basis</span><b id="rInvPick">–</b></div>
+        </div>
         <div class="plate pcs" id="pcsPlate">
-          <div class="ph"><span>PCS / inverter rating</span><span>kVA</span></div>
+          <div class="ph"><span id="rPcsH">PCS / inverter rating</span><span>kVA</span></div>
           <div class="pv"><span class="num" id="rPcs">–</span><span class="unit">kVA</span></div>
           <div class="pd" id="rPcsD">–</div>
           <div class="pick"><span id="rPcsPickL">Basis</span><b id="rPcsPick">–</b></div>
@@ -540,8 +562,12 @@ tr.short td{color:var(--muted)}
       </section>
 
       <section class="card" id="pcsCard" hidden>
-        <h2>PCS / inverter sizing</h2>
+        <h2 id="pcsCardH">PCS / inverter sizing</h2>
         <p class="lead" id="pcsLead"></p>
+        <h3 class="sub3" id="pvInvH3" hidden>PV inverter</h3>
+        <div class="tbl" id="pvInvWrap" hidden><table id="pvInvTbl"></table></div>
+        <h3 class="sub3" id="pcsH3" hidden>PCS (battery inverter)</h3>
+        <p class="hint" id="pcsMissing" hidden>Enter the max load current or max kVA to size the PCS.</p>
         <div class="tbl"><table id="pcsTbl"></table></div>
       </section>
 
@@ -591,9 +617,11 @@ tr.short td{color:var(--muted)}
 (function(){
 const HRS=['6–7','7–8','8–9','9–10','10–11','11–12','12–1','1–2','2–3','3–4','4–5','5–6'];
 const DEFAULTS={mode:'tou',peak:424,day:1350,off:485,monthly:2259,dayShare:60,days:30,minYield:3.25,avgMonthly:107,dod:90,eff:100,moduleW:585,batUnit:5,
-  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',cebOn:false,scen:'all',pvMargin:15,bessMargin:15,pcsBasis:'units',phase:'3',maxAmp:0,maxKva:0,loadPf:0.8,pcsMargin:20,dcac:1.2,batC:0.5,project:'',site:'',preparedBy:'',refNo:'',loads:[],est:{type:'home',days:30,phase:'3',eer:11,motorEff:0.85,div:0.8,sizeFor:'op',bill:0,sendPcs:true,appliedSig:''}};
+  profile:[0.01,0.05,0.18,0.32,0.48,0.6,0.65,0.55,0.35,0.18,0.1,0.03],kva:110,pf:0.8,loadPct:60,cebTime:'dayoff',cebOn:false,coupling:'dc',scen:'all',pvMargin:15,bessMargin:15,pcsBasis:'units',phase:'3',maxAmp:0,maxKva:0,loadPf:0.8,pcsMargin:20,dcac:1.2,maxPar:4,mixPcs:false,batC:0.5,project:'',site:'',preparedBy:'',refNo:'',loads:[],est:{type:'home',days:30,phase:'3',eer:11,motorEff:0.85,div:0.8,sizeFor:'op',bill:0,sendPcs:true,appliedSig:''}};
 const TEXT_KEYS=['project','site','preparedBy','refNo'];
-const NUM_KEYS=['peak','day','off','monthly','dayShare','days','minYield','avgMonthly','dod','eff','moduleW','batUnit','kva','pf','loadPct','maxAmp','maxKva','loadPf','pcsMargin','pvMargin','bessMargin','batC','dcac'];
+const NUM_KEYS=['peak','day','off','monthly','dayShare','days','minYield','avgMonthly','dod','eff','moduleW','batUnit','kva','pf','loadPct','maxAmp','maxKva','loadPf','pcsMargin','pvMargin','bessMargin','batC','dcac','maxPar'];
+const CP_L={dc:'DC coupling',ac:'AC coupling'};
+const CP_HINT={dc:'One hybrid inverter: the PV array and the battery share the same inverter. It is sized from the PV array ÷ oversize ratio, or the peak load where entered.',ac:'Two inverters on the AC side: a PV (grid-tie) inverter sized from the PV array ÷ oversize ratio, and a PCS (battery inverter) sized from the max load current or kVA.'};
 const SC_L={all:'Day, Peak & Off-peak',daypeak:'Day & Peak',peak:'Peak only'};
 const SC_HINT={all:'Battery covers 18:00–06:00 and any daytime shortfall. Solar runs the daytime load and charges the battery.',daypeak:'Battery covers the peak (18:30–22:30), the day-tariff hours without sun and any daytime shortfall. Solar runs the daytime load and charges the battery. CEB supplies off-peak (22:30–05:30).',peak:'Battery covers the peak (18:30–22:30) only. All solar output charges the battery; solar does not supply the site directly. CEB supplies the day and off-peak periods.'};
 const SC_NOTE={all:'Solar produces from 06:00 to 18:00 and runs the day-tariff load in those hours. The battery carries 18:00–06:00: all peak and off-peak units plus the one hour of day-tariff load in that window, and any daytime hour where solar is below the load.',daypeak:'Solar produces from 06:00 to 18:00 and runs the day-tariff load in those hours. The battery carries the peak (18:30–22:30), the day-tariff half-hours 05:30–06:00 and 18:00–18:30, and any daytime hour where solar is below the load. CEB supplies the off-peak period (22:30–05:30).',peak:'The battery carries only the peak period (18:30–22:30). Solar charges the battery and does not supply the site directly, so all of its design-day output counts towards recharging. CEB supplies the day and off-peak periods.'};
@@ -627,8 +655,10 @@ function fill(){
   state.profile.forEach((v,i)=>{$('p'+i).value=v;});
   $('cebTime').value=state.cebTime;
   $('phase').value=state.phase==='1'?'1':'3';
+  $('mixPcs').checked=!!state.mixPcs;
   $('cebOn').checked=!!state.cebOn;$('cebFields').hidden=!state.cebOn;
   setBasis(state.pcsBasis,true);
+  setCoupling(state.coupling,true);
   setScen(state.scen,true);
   setMode(state.mode,true);
   renderEstAll();
@@ -639,6 +669,13 @@ function setMode(m,silent){
   $('modeFlat').setAttribute('aria-pressed',m!=='tou');
   $('touRows').hidden=m!=='tou';$('flatRows').hidden=m==='tou';
   if(!silent)update(true);
+}
+function setCoupling(c,silent){
+  state.coupling=c==='ac'?'ac':'dc';
+  $('cpDC').setAttribute('aria-pressed',state.coupling==='dc');$('cpAC').setAttribute('aria-pressed',state.coupling==='ac');
+  $('cpHint').textContent=CP_HINT[state.coupling];
+  if(state.coupling==='ac'&&state.pcsBasis==='units')setBasis('amp',true);
+  if(!silent)update(false);
 }
 function setScen(sc,silent){
   state.scen=SC_L[sc]?sc:'all';
@@ -657,6 +694,7 @@ function readInputs(){
   for(let i=0;i<12;i++){const el=$('p'+i);const v=parseFloat(el.value);state.profile[i]=isFinite(v)&&v>=0?v:0;el.setAttribute('aria-invalid',el.value!==''&&!(v>=0));}
   state.cebTime=$('cebTime').value;
   state.phase=$('phase').value;
+  state.mixPcs=$('mixPcs').checked;
   state.cebOn=$('cebOn').checked;$('cebFields').hidden=!state.cebOn;
   TEXT_KEYS.forEach(k=>{state[k]=$(k).value.trim();});
 }
@@ -909,7 +947,7 @@ function renderSweep(){
   $('sweepTbl').innerHTML=h+'</tbody>';
 }
 function peakLoad(s){
-  if(s.pcsBasis==='units'&&s.scen!=='peak')return null;
+  if(s.pcsBasis==='units'&&(s.scen!=='peak'||s.coupling==='ac'))return null;
   const one=s.phase==='1',V=one?230:400,k3=one?1:Math.sqrt(3);
   let kva,amp;
   const pf=Math.min(Math.max(s.loadPf||0.8,0.1),1);
@@ -922,12 +960,61 @@ function peakLoad(s){
   if(!(kva>0))return null;
   return {one,V,k3,amp,kva,pf,kw:kva*pf};
 }
+// Nearest-capacity selection: single units or parallel combinations from PCS_STD.
+// Score = % oversize + 10 per extra unit + 2 per extra model, so a combination is used only when it saves real oversizing.
+// Mixed sets skip tiny add-on units: every unit must be at least 25 % of the largest.
+function chooseUnits(req,mixed,maxN){
+  maxN=Math.min(Math.max(Math.round(maxN)||4,1),8);
+  const S=PCS_STD,R=Math.max(req,1e-6);
+  let best=null;
+  const consider=(units)=>{const tot=units.reduce((a,b)=>a+b,0);if(tot<R-1e-9)return;
+    const n=units.length,dist=new Set(units).size;if(dist>1&&Math.min(...units)<0.25*Math.max(...units))return;
+    const score=(tot-R)/R*100+10*(n-1)+2*(dist-1);
+    if(!best||score<best.score-1e-9||(Math.abs(score-best.score)<1e-9&&n<best.n))best={units:units.slice().sort((a,b)=>b-a),total:tot,n,score};};
+  if(mixed){
+    const rec=(start,arr,sum)=>{if(arr.length)consider(arr);if(arr.length>=maxN||sum>=R)return;
+      for(let i=start;i<S.length;i++){arr.push(S[i]);rec(i,arr,sum+S[i]);arr.pop();}};
+    rec(0,[],0);
+  }else{for(let n=1;n<=maxN;n++)S.forEach(x=>consider(Array(n).fill(x)));}
+  if(!best){const big=S[S.length-1],n=Math.ceil(R/big);best={units:Array(n).fill(big),total:n*big,n,score:0};if(n===1){const t=Math.ceil(R/100)*100;best={units:[t],total:t,n:1,score:0};}}
+  const u=best.units,sd=v=>fmt(v,v%1?1:0),same=new Set(u).size===1;
+  best.label=u.length===1?`${sd(u[0])} kVA`:same?`${u.length} × ${sd(u[0])} kVA`:u.map(sd).join(' + ')+' kVA';
+  best.maxUnit=Math.max(...u);
+  return best;
+}
 function pcsData(s,m){
   if(!m)return null;
   const one=s.phase==='1',V=one?230:400,k3=one?1:Math.sqrt(3),phaseLbl=one?'1-phase, 230 V':'3-phase, 400 V',ph=one?'1-ph':'3-ph';
   const mg=s.pcsMargin/100,cMax=s.batC>0?s.batC:0.5,bessKwh=m.nBat*m.unit,sd=v=>fmt(v,v%1?1:0),phTxt=`${one?'':'√3 × '}${V} V`;
   const ratio=s.dcac>0?s.dcac:1.2,rt=fmt(ratio,2).replace(/0$/,'');
-  const pick=req=>PCS_STD.find(x=>x>=req-1e-9)||Math.ceil(req/100)*100;
+  let cfg=null;const pick=req=>{cfg=chooseUnits(req,!!s.mixPcs,s.maxPar);return cfg.total;};
+  const fin=o=>{const sug=o.rows.find(r=>/^Suggested/.test(r[0]));if(sug&&cfg){sug[1]=cfg.n>1?`Nearest capacity: ${cfg.n} units in parallel${new Set(cfg.units).size>1?' (mixed sizes)':''}`:'Nearest common rating at or above the requirement';sug[2]=cfg.n>1?`${cfg.label} = ${sd(cfg.total)} kVA`:cfg.label;}
+    if(cfg&&cfg.n>1){o.detail+=` · ${cfg.label}`;o.pdfDetail+=` · ${cfg.label}`;o.copy+=` (${cfg.label})`;o.rows.push(['Note',`${cfg.n} units in parallel: confirm the model supports parallel operation and use matching firmware and settings`,'Check']);}
+    o.cfg=cfg;return o;};
+  if(s.coupling==='ac'){
+    const pl=peakLoad(s);if(!pl)return null;
+    const reqKva=pl.kva*(1+mg),std=pick(reqKva),outAmp=std*1000/(k3*V),c=bessKwh>0?pl.kw/bessKwh:NaN,ok=c<=cMax+1e-9;
+    const o={basis:'ac',std,reqKva,c,cLvl:ok?'ok':'no',
+      cTxt:ok?`OK, within the ${fmt(cMax,2)} C battery rating`:`Above the ${fmt(cMax,2)} C battery rating: add batteries or use a higher-rated battery`,
+      detail:`Required ${fmt(reqKva,1)} kVA incl. ${fmt(s.pcsMargin,0)} % margin · battery at ${fmt(c,2)} C`,
+      pdfDetail:`Needs ${fmt(reqKva,1)} kVA incl. ${fmt(s.pcsMargin,0)} % margin`,
+      pickL:'Peak load',pickV:`${fmt(pl.amp,0)} A · ${fmt(pl.kva,1)} kVA (${ph})`,
+      inputs:[['PCS basis','Measured peak load (AC coupling)'],['Supply',phaseLbl],[s.pcsBasis==='kva'?'Max demand':'Max load current (per phase)',s.pcsBasis==='kva'?fmt(s.maxKva,1)+' kVA':fmt(s.maxAmp,0)+' A'],['Load power factor',fmt(pl.pf,2)],['PCS margin on peak load',fmt(s.pcsMargin,0)+' %'],['Battery max discharge',fmt(cMax,2)+' C']],
+      copy:`PCS (battery inverter): ${sd(std)} kVA suggested, from peak load ${fmt(pl.amp,0)} A / ${fmt(pl.kva,1)} kVA (${phaseLbl}) + ${s.pcsMargin}% margin = ${fmt(reqKva,1)} kVA; battery at ${fmt(c,2)} C`,
+      rows:[
+        ['Basis','AC coupling: the PCS (battery inverter) carries the site load from the battery, so it is sized from the measured peak load','Peak load'],
+        ['Peak load current',s.pcsBasis==='kva'?`${fmt(pl.kva,1)} kVA ÷ (${phTxt})`:'Entered value',fmt(pl.amp,1)+' A'],
+        ['Peak load apparent power',s.pcsBasis==='kva'?'Entered value':`${phTxt} × ${fmt(pl.amp,1)} A`,fmt(pl.kva,2)+' kVA'],
+        ['Peak load active power',`${fmt(pl.kva,2)} kVA × ${fmt(pl.pf,2)} PF`,fmt(pl.kw,2)+' kW'],
+        ['Required PCS rating',`${fmt(pl.kva,2)} kVA × (1 + ${fmt(s.pcsMargin,0)} % margin)`,fmt(reqKva,2)+' kVA'],
+        ['Suggested PCS','Next common rating at or above the requirement',sd(std)+' kVA','',1],
+        ['PCS output current at rating',`${sd(std)} kVA ÷ (${phTxt}), per phase, combined`,fmt(outAmp,1)+' A'],
+        ['Battery discharge at peak load',`${fmt(pl.kw,2)} kW ÷ ${sd(bessKwh)} kWh recommended BESS`,fmt(c,2)+' C'],
+      ]};
+    if(one&&cfg.maxUnit>10)o.rows.push(['Note','Single-phase units above 10 kVA are uncommon; consider a 3-phase PCS','Check']);
+    o.one=one;o.phaseLbl=phaseLbl;
+    return fin(o);
+  }
   const peak=s.scen==='peak',pl=peakLoad(s);
   if(peak&&!pl)return null;
   const byU=!!pl&&s.pcsBasis==='units';
@@ -968,16 +1055,60 @@ function pcsData(s,m){
       ...loadRows,
       ...(pl?[['Required PCS rating','Larger of the PV and peak-load requirements',fmt(reqKva,2)+' kVA · '+(gov==='load'?'peak load':'PV')]]:[]),
       ['Suggested PCS / inverter','Next common rating at or above the requirement',sd(std)+' kVA','',1],
-      ['PCS output current at rating',`${sd(std)} kVA ÷ (${phTxt}), per phase`,fmt(outAmp,1)+' A'],
+      ['PCS output current at rating',`${sd(std)} kVA ÷ (${phTxt}), per phase, combined`,fmt(outAmp,1)+' A'],
       ['Actual DC/AC ratio',`${fmt(m.Pp,2)} kWp ÷ ${sd(std)} kVA · target ${rt} or less; check the inverter's max PV input`,fmt(dcacAct,2)],
       pl?['Battery discharge at peak load',`${fmt(pl.kw,2)} kW ÷ ${sd(bessKwh)} kWh recommended BESS`,fmt(c,2)+' C']
         :['Battery discharge at full PCS output',`${sd(std)} kW ÷ ${sd(bessKwh)} kWh recommended BESS · `+(within?`within the ${fmt(cMax,2)} C battery rating`:`above the ${fmt(cMax,2)} C rating; the battery limits discharge to ${fmt(bessKwh*cMax,1)} kW`),fmt(cFull,2)+' C'],
     ]};
-  if(one&&o.std>10)o.rows.push(['Note','Single-phase units above 10 kVA are uncommon; consider a 3-phase PCS','Check']);
+  if(one&&cfg.maxUnit>10)o.rows.push(['Note','Single-phase units above 10 kVA are uncommon; consider a 3-phase PCS','Check']);
   o.one=one;o.phaseLbl=phaseLbl;
-  return o;
+  return fin(o);
 }
+function pvInvData(s,m){
+  if(!m||s.coupling!=='ac')return null;
+  const one=s.phase==='1',V=one?230:400,k3=one?1:Math.sqrt(3),phaseLbl=one?'1-phase, 230 V':'3-phase, 400 V',ph=one?'1-ph':'3-ph';
+  const ratio=s.dcac>0?s.dcac:1.2,rt=fmt(ratio,2).replace(/0$/,''),sd=v=>fmt(v,v%1?1:0);
+  const req=m.Pp/ratio,cfg=chooseUnits(req,true,s.maxPar),std=cfg.total,outAmp=std*1000/(k3*V),dcac=m.Pp/std,multi=cfg.n>1;
+  return {std,req,dcac,
+    cfg,detail:`Recommended PV ${fmt(m.Pp,2)} kWp ÷ ${rt} = ${fmt(req,1)} kVA · DC/AC ${fmt(dcac,2)}`+(multi?` · ${cfg.label}`:''),
+    pdfDetail:`PV ${fmt(m.Pp,2)} kWp ÷ ${rt} · DC/AC ${fmt(dcac,2)}`+(multi?` · ${cfg.label}`:''),
+    pickV:`PV array ÷ ${rt} (${ph})`,
+    inputs:[['PV inverter basis',`Recommended PV ÷ ${rt}`]],
+    copy:`PV inverter: ${sd(std)} kVA suggested${multi?` (${cfg.label})`:''}; PV ${fmt(m.Pp,2)} kWp ÷ ${rt} = ${fmt(req,1)} kVA; DC/AC ${fmt(dcac,2)}`,
+    rows:[
+      ['Basis',`AC coupling: the PV (grid-tie) inverter is sized from the PV array ÷ ${rt} oversize ratio`,`PV ÷ ${rt}`],
+      ['Recommended PV array','Installed array from the solar sizing above',fmt(m.Pp,2)+' kWp'],
+      ['Required PV inverter rating',`${fmt(m.Pp,2)} kWp ÷ ${rt} oversize ratio (DC/AC)`,fmt(req,2)+' kVA'],
+      ['Suggested PV inverter',multi?`Nearest capacity: ${cfg.n} inverters${new Set(cfg.units).size>1?' (mixed sizes allowed for grid-tie inverters)':''}`:'Nearest common rating at or above the requirement',multi?`${cfg.label} = ${sd(std)} kVA`:cfg.label,'',1],
+      ['PV inverter output current at rating',`${sd(std)} kVA ÷ (${one?'':'√3 × '}${V} V), per phase, combined`,fmt(outAmp,1)+' A'],
+      ['Actual DC/AC ratio',`${fmt(m.Pp,2)} kWp ÷ ${sd(std)} kVA · target ${rt} or less; check the inverter's max PV input`,fmt(dcac,2)],
+    ].concat(one&&cfg.maxUnit>10?[['Note','Single-phase units above 10 kVA are uncommon; consider a 3-phase inverter','Check']]:[])};
+}
+const tblHtml=rows=>'<tbody>'+rows.map(r=>`<tr class="${r[4]?'key':''}"><td>${r[0]}<span class="f">${r[1]}</span></td><td class="n">${r[2]}</td></tr>`).join('')+'</tbody>';
 function renderPcs(){
+  const ac=state.coupling==='ac';
+  $('pvInvPlate').hidden=!ac;$('plates').classList.toggle('four',ac);
+  $('rPcsH').textContent=ac?'PCS (battery inverter)':'PCS / inverter rating';
+  $('pcsGh').textContent=ac?'PV inverter and PCS sizing':'PCS / inverter sizing';
+  $('pcsCardH').textContent=ac?'PV inverter and PCS sizing':'PCS / inverter sizing';
+  $('basisUnits').hidden=ac;
+  ['pvInvH3','pvInvWrap','pcsH3'].forEach(id=>$(id).hidden=!ac);
+  if(ac){
+    const iv=model?pvInvData(state,model):null,d=model?pcsData(state,model):null;
+    const rt=fmt(state.dcac>0?state.dcac:1.2,2).replace(/0$/,'');
+    $('rowPf').hidden=false;$('rowMg').hidden=false;
+    $('pcsHint').textContent=`AC coupling: the PV inverter is sized from the recommended PV array ÷ ${rt}. The PCS (battery inverter) is sized from the max load current or kVA plus the design margin.`;
+    $('pcsLead').textContent='Ratings for the PV (grid-tie) inverter and the PCS (battery inverter), with checks on DC/AC ratio and battery discharge.';
+    $('pcsCard').hidden=!model;
+    if(iv){$('rInv').textContent=fmt(iv.std,iv.std%1?1:0);$('rInvD').textContent=iv.detail;$('rInvPick').textContent=iv.pickV;$('pvInvTbl').innerHTML=tblHtml(iv.rows);}
+    else{$('rInv').textContent='–';$('rInvD').textContent='–';$('rInvPick').textContent='–';$('pvInvTbl').innerHTML='';}
+    $('pcsPlate').classList.toggle('off',!d);$('pcsMissing').hidden=!!d;
+    if(!d){$('rPcs').textContent='–';$('rPcsD').textContent=model?'Enter the max load current or max kVA to size the PCS':'–';$('rPcsPickL').textContent='Peak load';$('rPcsPick').textContent='–';$('pcsTbl').innerHTML='';return;}
+    $('rPcs').textContent=fmt(d.std,d.std%1?1:0);$('rPcsD').textContent=d.detail;$('rPcsPickL').textContent=d.pickL;$('rPcsPick').textContent=d.pickV;
+    $('pcsTbl').innerHTML=tblHtml(d.rows).replace('</tbody>','')+`<tr><td>Battery discharge check</td><td class="n"><span class="pill ${d.cLvl==='ok'?'ok':'no'}">${d.cLvl==='ok'?'OK':'Too high'}</span></td></tr></tbody>`;
+    return;
+  }
+  $('pcsMissing').hidden=true;
   const peak=state.scen==='peak';
   const bu=state.pcsBasis;
   $('basisUnits').textContent=peak?'Peak units ÷ 4 h':'Solar only';
@@ -1022,6 +1153,8 @@ $('form').addEventListener('input',e=>{if(e.target.id!=='selSize')update(true);}
 $('form').addEventListener('submit',e=>e.preventDefault());
 $('modeTou').addEventListener('click',()=>setMode('tou'));
 $('modeFlat').addEventListener('click',()=>setMode('flat'));
+$('cpDC').addEventListener('click',()=>setCoupling('dc'));
+$('cpAC').addEventListener('click',()=>setCoupling('ac'));
 $('scAll').addEventListener('click',()=>setScen('all'));
 $('scDayPeak').addEventListener('click',()=>setScen('daypeak'));
 $('scPeak').addEventListener('click',()=>setScen('peak'));
@@ -1047,6 +1180,7 @@ $('copyBtn').addEventListener('click',()=>{
   ];
   const pc=pcsData(s,model);
   if(estApplied()){const ec=estCalc();t.push(`Units from load estimate: ${ec.rows.length} loads, ${fmt(ec.totD,1)} kWh per operating day, max demand ${fmt(ec.mdKva,1)} kVA`);}
+  if(s.coupling==='ac'){t.push('System: AC coupling (PV inverter + PCS)');const iv=pvInvData(s,model);if(iv)t.push(iv.copy);}else t.push('System: DC coupling (hybrid inverter)');
   if(pc)t.push(pc.copy);
   if(s.cebOn){const cd=cebData(b,s,Pp);t.push(`CEB connection check: ${cd.status}`);}
   t.push('',LEGAL.copy+' Confidential.',LEGAL.nfc);
@@ -1138,7 +1272,7 @@ async function buildReport(){
   pdf.text('Regen Renewables (Pvt) Ltd. · '+dateStr,M,y+12.5,{size:9,color:K.muted});
   y+=5.5;
   y+=12.5;
-  {const ls=pdf.wrap(`BESS operation: ${SC_L[b.scen]}. ${SC_HINT[b.scen]}`,CW-32,9);ls.forEach((l,i)=>pdf.text(l,M,y+3+i*4.2,{size:9,color:K.muted}));y+=4+ls.length*4.2;}
+  {const ls=pdf.wrap(`${CP_L[s.coupling]||'DC coupling'} · BESS operation: ${SC_L[b.scen]}. ${SC_HINT[b.scen]}`,CW-32,9);ls.forEach((l,i)=>pdf.text(l,M,y+3+i*4.2,{size:9,color:K.muted}));y+=4+ls.length*4.2;}
   pdf.rect(M,y,CW,15,{fill:K.band});
   const fw=CW/4;
   [['Project / client',s.project],['Site location',s.site],['Prepared by',s.preparedBy],['Reference no.',s.refNo]].forEach((f,i)=>{
@@ -1149,10 +1283,11 @@ async function buildReport(){
   y+=21;
 
   // result plates
-  const pcR=pcsData(s,model);
-  const nPl=pcR?3:2,bw=(CW-6*(nPl-1))/nPl,bh=41;
+  const pcR=pcsData(s,model),ivR=pvInvData(s,model),acR=s.coupling==='ac';
+  const nPl=(pcR?1:0)+(ivR?1:0)+2,perRow=nPl===4?2:nPl,bw=(CW-6*(perRow-1))/perRow,bh=41;
+  let px=M;const slot=()=>{const x=px;px+=bw+6;if(px>M+CW){px=M;}return x;};
   const plate=(x,soft,label,ref,num,u,detail,pick,pickL)=>{
-    const big=nPl===3?24:28;
+    const big=perRow===3?24:28;
     pdf.rect(x,y,bw,7,{fill:soft});
     pdf.rect(x,y,bw,bh,{stroke:K.ink,lw:0.5});
     pdf.text(label,x+3.5,y+4.8,{size:7.5,bold:true});
@@ -1162,12 +1297,13 @@ async function buildReport(){
     pdf.text(detail,x+3.5,y+25.5,{size:8,color:K.muted,maxW:bw-7});
     pdf.line(x,y+29,x+bw,y+29,K.line,0.3,[1,1]);
     pdf.text(pickL,x+3.5,y+33.2,{size:7.6,color:K.muted,maxW:bw-7});
-    pdf.text(pick,x+3.5,y+38,{size:nPl===3?8.6:9,bold:true,maxW:bw-7});
+    pdf.text(pick,x+3.5,y+38,{size:perRow===3?8.6:9,bold:true,maxW:bw-7});
+    if(x+bw>=M+CW-0.5)y+=bh+4;
   };
-  plate(M,K.battSoft,'REQUIRED BESS CAPACITY','C41',fmt(atMin.bess,1),'kWh',(nPl===3?`Min. ${nBatMin} × ${fmt(unit,dec)} kWh · ${fmt(s.dod,0)} % DOD`:`${fmt(atMin.usable,1)} kWh/day at ${fmt(s.dod,0)} % DOD · minimum ${nBatMin} × ${fmt(unit,dec)} kWh`),`${nBat} × ${fmt(unit,dec)} kWh = ${fmt(nBat*unit,dec)} kWh`,model.bessBy==='power'?`Recommended · sized for ${fmt(model.pl.kw,1)} kW peak`:`Recommended +${fmt(s.bessMargin,0)} %`);
-  plate(M+bw+6,K.sunSoft,'MINIMUM SOLAR SYSTEM','C42',fmt(Pmin,2),'kWp',(nPl===3?`Min. ${nModMin} × ${fmt(s.moduleW,0)} Wp = ${fmt(PpMin,2)} kWp`:`On a ${fmt(s.minYield,2)} kWh/kWp day · minimum ${nModMin} × ${fmt(s.moduleW,0)} Wp = ${fmt(PpMin,2)} kWp`),`${nMod} × ${fmt(s.moduleW,0)} Wp = ${fmt(Pp,2)} kWp`,`Recommended +${fmt(s.pvMargin,0)} %`);
-  if(pcR)plate(M+2*(bw+6),K.band,'PCS / INVERTER RATING','',fmt(pcR.std,pcR.std%1?1:0),'kVA',pcR.pdfDetail,pcR.pickV,pcR.pickL);
-  y+=bh+4;
+  plate(slot(),K.battSoft,'REQUIRED BESS CAPACITY','C41',fmt(atMin.bess,1),'kWh',(perRow===3?`Min. ${nBatMin} × ${fmt(unit,dec)} kWh · ${fmt(s.dod,0)} % DOD`:`${fmt(atMin.usable,1)} kWh/day at ${fmt(s.dod,0)} % DOD · minimum ${nBatMin} × ${fmt(unit,dec)} kWh`),`${nBat} × ${fmt(unit,dec)} kWh = ${fmt(nBat*unit,dec)} kWh`,model.bessBy==='power'?`Recommended · sized for ${fmt(model.pl.kw,1)} kW peak`:`Recommended +${fmt(s.bessMargin,0)} %`);
+  plate(slot(),K.sunSoft,'MINIMUM SOLAR SYSTEM','C42',fmt(Pmin,2),'kWp',(perRow===3?`Min. ${nModMin} × ${fmt(s.moduleW,0)} Wp = ${fmt(PpMin,2)} kWp`:`On a ${fmt(s.minYield,2)} kWh/kWp day · minimum ${nModMin} × ${fmt(s.moduleW,0)} Wp = ${fmt(PpMin,2)} kWp`),`${nMod} × ${fmt(s.moduleW,0)} Wp = ${fmt(Pp,2)} kWp`,`Recommended +${fmt(s.pvMargin,0)} %`);
+  if(ivR)plate(slot(),K.sunSoft,'PV INVERTER RATING','',fmt(ivR.std,ivR.std%1?1:0),'kVA',ivR.pdfDetail,ivR.pickV,'Basis');
+  if(pcR)plate(slot(),K.band,acR?'PCS (BATTERY INVERTER)':'PCS / INVERTER RATING','',fmt(pcR.std,pcR.std%1?1:0),'kVA',pcR.pdfDetail,pcR.pickV,pcR.pickL);
 
   const pairs=arr=>{const cw=(CW-10)/2;for(let i=0;i<arr.length;i+=2){ensure(6.6);[arr[i],arr[i+1]].forEach((p,j)=>{if(!p)return;const x=M+j*(cw+10);
     pdf.text(p[0],x,y+4.4,{size:8.8,color:K.muted,maxW:cw-34});pdf.text(p[1],x+cw,y+4.4,{size:8.8,bold:true,align:'right'});pdf.line(x,y+6.3,x+cw,y+6.3,K.line,0.25);});y+=6.6;}};
@@ -1177,11 +1313,13 @@ async function buildReport(){
   // inputs
   H('Design inputs');
   const tou=s.mode==='tou';
-  const inp=[['BESS operation',SC_L[b.scen]],['Tariff',tou?'TOU':'Non-TOU'],['Billing days',fmt(b.days,0)+' days']];
+  const inp=[['System type',acR?'AC coupling (PV inverter + PCS)':'DC coupling (hybrid inverter)'],['BESS operation',SC_L[b.scen]],['Tariff',tou?'TOU':'Non-TOU'],['Billing days',fmt(b.days,0)+' days']];
   if(tou)inp.push(['Peak units (18:30–22:30)',fmt(s.peak,0)+' kWh/mo'],['Day units (05:30–18:30)',fmt(s.day,0)+' kWh/mo'],['Off-peak units (22:30–05:30)',fmt(s.off,0)+' kWh/mo'],['Total monthly units',fmt(b.totalM,0)+' kWh/mo']);
   else inp.push(['Monthly units',fmt(s.monthly,0)+' kWh/mo'],['Used in daytime',fmt(s.dayShare,0)+' %']);
   inp.push(['Design-day yield',fmt(s.minYield,2)+' kWh/kWp'],['Average monthly yield',fmt(s.avgMonthly,0)+' kWh/kWp'],['Depth of discharge',fmt(s.dod,0)+' %'],['Round-trip efficiency',fmt(s.eff,0)+' %'],['PV module rating',fmt(s.moduleW,0)+' Wp'],['Battery unit size',fmt(unit,dec)+' kWh'],['PV design margin',fmt(s.pvMargin,0)+' %'],['BESS design margin',fmt(s.bessMargin,0)+' %']);
+  if(ivR)inp.push(...ivR.inputs,['PV oversize ratio (DC/AC)',fmt(s.dcac>0?s.dcac:1.2,2)]);
   if(pcR)inp.push(...pcR.inputs);
+  if(pcR||ivR)inp.push(['Max units in parallel',fmt(Math.min(Math.max(Math.round(s.maxPar)||4,1),8),0)],['Mixed PCS / hybrid sizes',s.mixPcs?'Allowed':'Identical units only']);
   pairs(inp);
 
   H('Key figures');
@@ -1216,7 +1354,8 @@ async function buildReport(){
       pdf.text(r[2],M+CW-1.5,y+4.4,{size:8.8,bold:true,align:'right'});
       y+=h;pdf.line(M,y,M+CW,y,K.line,0.25);});
   };
-  if(pcR){H('PCS / inverter sizing',50);rowTable(pcR.rows.map(r=>[r[0],r[1],r[2],'',r[4]]),false);
+  if(ivR){H('PV inverter sizing (AC coupling)',50);rowTable(ivR.rows.map(r=>[r[0],r[1],r[2],'',r[4]]),false);}
+  if(pcR){H(acR?'PCS (battery inverter) sizing':'PCS / inverter sizing',50);rowTable(pcR.rows.map(r=>[r[0],r[1],r[2],'',r[4]]),false);
     if(pcR.cTxt){ensure(8);pdf.text('Battery discharge check: '+pcR.cTxt,M+1.5,y+5,{size:8.8,bold:true,color:pcR.cLvl==='ok'?K.batt:K.warn,maxW:CW-3});y+=8;}}
   H('Calculation at the minimum solar size',40);
   rowTable(calcRows(),true);
@@ -1260,7 +1399,7 @@ async function buildReport(){
    'The array qualifies once its design-day output available for charging can put the full battery energy back each day.',
    `Recommended selections add the design margins (PV ${fmt(s.pvMargin,0)} %, BESS ${fmt(s.bessMargin,0)} %) to the minimum sizes, then round up to whole modules and battery units.`,
    'The hourly solar profile is a clear-day 1 kWp curve for Sri Lanka, scaled so the day totals the design-day yield.',
-   `PCS / inverter: the recommended PV array ÷ the ${fmt(s.dcac>0?s.dcac:1.2,2)} PV oversize ratio, or the peak load plus margin where used, whichever is larger.`,
+   acR?`AC coupling: the PV inverter is the recommended PV array ÷ the ${fmt(s.dcac>0?s.dcac:1.2,2)} PV oversize ratio; the PCS (battery inverter) is the measured peak load plus margin. Sizing of the battery and array is the same as DC coupling.`:`PCS / inverter: the recommended PV array ÷ the ${fmt(s.dcac>0?s.dcac:1.2,2)} PV oversize ratio, or the peak load plus margin where used, whichever is larger.`,
    'Battery figures are at the stated DOD and efficiency. In Peak only, the PCS is sized from the peak load and the recommended BESS is also large enough to deliver that peak power within the battery\'s max discharge rate.'
   ].forEach(t=>{const ls=pdf.wrap(t,CW-6,8.4);ensure(ls.length*4+2);pdf.text('•',M+1,y+3.6,{size:8.4,color:K.muted});ls.forEach((l,i)=>pdf.text(l,M+5,y+3.6+i*4,{size:8.4,color:K.muted}));y+=ls.length*4+2;});
 
@@ -1350,13 +1489,14 @@ function histItem(d,names){
   const c1=elx('div');c1.appendChild(elx('div','t',d.project||'Untitled'));
   const sub=[d.site,d.refNo].filter(Boolean).join(' · ');if(sub)c1.appendChild(elx('div','m',sub));
   const who=d.createdBy&&names[d.createdBy]?names[d.createdBy].name:'';
-  c1.appendChild(elx('div','m',SC_L[r.scen||'all']+' · saved '+when(d.updatedAt||d.createdAt)+(who?' by '+who:'')+(d.preparedBy?' · prepared by '+d.preparedBy:'')));
+  c1.appendChild(elx('div','m',(r.coupling==='ac'?'AC coupling · ':'')+SC_L[r.scen||'all']+' · saved '+when(d.updatedAt||d.createdAt)+(who?' by '+who:'')+(d.preparedBy?' · prepared by '+d.preparedBy:'')));
   const c2=elx('div','fig');
   const fig=(k,v)=>{const sp=elx('span',null,k+' ');sp.appendChild(elx('b',null,v));c2.appendChild(sp);};
   fig('BESS',fmt(r.bess,1)+' kWh');fig('Min. solar',fmt(r.pv,2)+' kWp');
   if(r.nMod)fig(r.pvMargin!=null?'Rec. PV':'Modules',`${r.nMod} × ${fmt(r.moduleW,0)} Wp`);
   if(r.nBat)fig(r.bessMargin!=null?'Rec. BESS':'Batteries',`${r.nBat} × ${fmt(r.unit,r.unit%1?1:0)} kWh`);
   if(r.pcsKva)fig('PCS',fmt(r.pcsKva,r.pcsKva%1?1:0)+' kVA');
+  if(r.pvInvKva)fig('PV inv.',fmt(r.pvInvKva,r.pvInvKva%1?1:0)+' kVA');
   fig('Units',fmt(r.totalM,0)+' kWh/mo');
   const c3=elx('div','acts');
   if(confirmDel===keyOf(d)){
@@ -1396,7 +1536,7 @@ function entryData(){
   const {b,Pmin,atMin,Pp,nMod,nBat,unit,nModMin,nBatMin}=model;
   return {v:1,project:state.project,site:state.site,preparedBy:state.preparedBy,refNo:state.refNo,
     inputs:JSON.parse(JSON.stringify(state)),cebOpen:!!state.cebOn,selected:+(+selected).toFixed(3),
-    results:{bess:+atMin.bess.toFixed(2),usable:+atMin.usable.toFixed(2),pv:+Pmin.toFixed(3),pvSel:+Pp.toFixed(3),nMod,moduleW:state.moduleW,nBat,unit,totalM:+b.totalM.toFixed(1),mode:state.mode,scen:b.scen,nModMin,nBatMin,bessBy:model.bessBy,pvMargin:state.pvMargin,bessMargin:state.bessMargin,pcsKva:(pcsData(state,model)||{}).std||null},
+    results:{bess:+atMin.bess.toFixed(2),usable:+atMin.usable.toFixed(2),pv:+Pmin.toFixed(3),pvSel:+Pp.toFixed(3),nMod,moduleW:state.moduleW,nBat,unit,totalM:+b.totalM.toFixed(1),mode:state.mode,scen:b.scen,nModMin,nBatMin,bessBy:model.bessBy,pvMargin:state.pvMargin,bessMargin:state.bessMargin,pcsKva:(pcsData(state,model)||{}).std||null,coupling:state.coupling,pvInvKva:(pvInvData(state,model)||{}).std||null},
     updatedAt:Date.now()};
 }
 let saving=false;
